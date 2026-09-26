@@ -1,0 +1,946 @@
+<app-site-shell>
+  <section class="profile-page">
+    <h1 class="page-title">Profile</h1>
+
+    @if (errorMessage()) {
+      <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+    }
+
+    @if (isLoading()) {
+      <article class="profile-card profile-card--loading"></article>
+    } @else if (profile(); as currentProfile) {
+      <article class="profile-card">
+        <div class="profile-card__identity">
+          @if (avatarUrl(); as profileImageUrl) {
+            <img class="profile-card__avatar" [alt]="currentProfile.userName" [src]="profileImageUrl" />
+          } @else {
+            <div class="profile-card__avatar profile-card__avatar--fallback">{{ userInitial() }}</div>
+          }
+
+          <div class="profile-card__copy">
+            <h2>{{ currentProfile.userName }}</h2>
+            <p>{{ currentProfile.email }}</p>
+          </div>
+        </div>
+
+        <div class="profile-card__actions">
+          <button class="warning-button" (click)="openEditProfile()" type="button">Edit</button>
+          <button class="danger-button" (click)="requestLogout()" type="button">Logout</button>
+        </div>
+      </article>
+
+      <section class="profile-tabs">
+        @for (tab of tabs(); track tab.key) {
+          <button
+            class="profile-tabs__button"
+            [class.profile-tabs__button--active]="activeTab() === tab.key"
+            (click)="setActiveTab(tab.key)"
+            type="button">
+            {{ tab.label }}
+            @if (tab.hasDot) {
+              <span class="profile-tabs__dot"></span>
+            }
+          </button>
+        }
+      </section>
+
+      @if (activeTab() === 'products') {
+        <section class="profile-section">
+          <h2 class="profile-section__title">Your products</h2>
+
+          <div class="profile-toolbar">
+            <button class="profile-brand-button profile-toolbar__add" (click)="openAddProduct()" type="button">
+              + Add Product
+            </button>
+
+            <div class="profile-toolbar__controls">
+              <label class="profile-toolbar__search">
+                <span class="visually-hidden">Search your products</span>
+                <input
+                  [ngModel]="searchTerm()"
+                  (keydown.enter)="$event.preventDefault(); applySearch()"
+                  (ngModelChange)="updateSearch($event)"
+                  class="profile-input"
+                  placeholder="Search..."
+                  type="search" />
+              </label>
+
+              <button class="profile-icon-button" (click)="applySearch()" type="button" aria-label="Search">
+                <img alt="" src="assets/icons/search-brand.svg" />
+              </button>
+
+              <div class="profile-toolbar__dropdown-wrap">
+                <button class="profile-icon-button" (click)="toggleSortMenu($event)" type="button" aria-label="Sort products">
+                  <img alt="" src="assets/icons/sorting-brand.svg" />
+                </button>
+
+                @if (isSortMenuOpen()) {
+                  <div class="profile-dropdown">
+                    <div class="profile-radio-list">
+                      @for (option of sortOptions; track option.value) {
+                        <label class="profile-radio">
+                          <input
+                            [checked]="selectedSort() === option.value"
+                            (change)="updateSort(option.value)"
+                            name="profile-sort"
+                            type="radio" />
+                          <span class="profile-radio__mark"></span>
+                          <span>{{ option.label }}</span>
+                        </label>
+                      }
+                    </div>
+
+                    <div class="profile-dropdown__actions">
+                      <button class="profile-big-button" (click)="applySort()" type="button">Apply</button>
+                      <button class="profile-gray-button" (click)="resetSort()" type="button">Reset</button>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <div class="profile-toolbar__dropdown-wrap">
+              <button
+                class="profile-icon-button"
+                (click)="toggleFilterMenu($event)"
+                type="button"
+                aria-label="Filter products">
+                <img alt="" src="assets/icons/filter-brand.svg" />
+              </button>
+
+              @if (isFilterMenuOpen()) {
+                <div class="profile-dropdown">
+                  <div class="profile-field">
+                    <h4>Category</h4>
+                    <div class="profile-select-wrap">
+                      <select
+                        [ngModel]="selectedCategory()"
+                        (ngModelChange)="updateCategory($event)"
+                        class="profile-select">
+                        @for (category of categoryOptions(); track category.value) {
+                          <option [value]="category.value">{{ category.label }}</option>
+                        }
+                      </select>
+                      <img alt="" src="assets/icons/down.svg" />
+                    </div>
+                  </div>
+
+                  <div class="profile-field">
+                    <h4>Condition</h4>
+                    <div class="profile-select-wrap">
+                      <select
+                        [ngModel]="selectedCondition()"
+                        (ngModelChange)="updateCondition($event)"
+                        class="profile-select">
+                        @for (option of conditionOptions; track option.value) {
+                          <option [value]="option.value">{{ option.label }}</option>
+                        }
+                      </select>
+                      <img alt="" src="assets/icons/down.svg" />
+                    </div>
+                  </div>
+
+                  <div class="profile-field">
+                    <h4>Price</h4>
+                    <div class="profile-price-row">
+                      <input
+                        [ngModel]="minPrice()"
+                        (ngModelChange)="updateMinPrice($event)"
+                        class="profile-input"
+                        placeholder="Min"
+                        type="number" />
+                      <input
+                        [ngModel]="maxPrice()"
+                        (ngModelChange)="updateMaxPrice($event)"
+                        class="profile-input"
+                        placeholder="Max"
+                        type="number" />
+                    </div>
+                  </div>
+
+                  <div class="profile-dropdown__actions">
+                    <button class="profile-big-button" (click)="applyFilters()" type="button">Apply</button>
+                    <button class="profile-gray-button" (click)="resetFilters()" type="button">Reset</button>
+                  </div>
+                </div>
+              }
+              </div>
+            </div>
+          </div>
+
+          @if (filteredListings().length > 0) {
+            <div class="product-list">
+              @for (listing of filteredListings(); track listing.id) {
+                <article class="product-row product-row--listing" (click)="openListing(listing.id)">
+                  <div class="product-row__media">
+                    @if (listingImageUrl(listing); as imageUrl) {
+                      <img [alt]="listing.title" [src]="imageUrl" />
+                    } @else {
+                      <div class="product-row__placeholder">BSE</div>
+                    }
+                  </div>
+
+                  <div class="product-row__content">
+                    <div class="product-row__main">
+                      <h3>{{ listing.title }}</h3>
+                      <span class="profile-condition-badge">{{ formatCondition(listing.condition) }}</span>
+                      <p>{{ listing.city }} &mdash; {{ listing.createdAtUtc | date: 'dd.MM' }}</p>
+                    </div>
+
+                    <div class="product-row__meta">
+                      <strong>{{ listing.price | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                      <div class="product-row__buttons">
+                        @if (canEditListing(listing)) {
+                          <button
+                            class="warning-button"
+                            (click)="openListingEditor(listing.id, $event)"
+                            type="button">
+                            Edit
+                          </button>
+                        }
+                        <button
+                          class="danger-button"
+                          (click)="requestDeleteListing(listing, $event)"
+                          type="button">
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          } @else {
+            <article class="empty-state">
+              <div>
+                <h3>Add a new product</h3>
+                <p>List your products for sale</p>
+              </div>
+              <img alt="" src="assets/images/empty-profile-products.png" />
+              <button class="profile-brand-button" (click)="openAddProduct()" type="button">+ Add Product</button>
+            </article>
+          }
+        </section>
+      } @else if (activeTab() === 'orders') {
+        <section class="profile-section">
+          <h2 class="profile-section__title">Orders</h2>
+
+          <div class="profile-toolbar profile-toolbar--orders">
+            <div class="profile-toolbar__controls">
+              <label class="profile-toolbar__search">
+                <span class="visually-hidden">Search orders</span>
+                <input
+                  [ngModel]="orderSearchTerm()"
+                  (keydown.enter)="$event.preventDefault(); applyOrderSearch()"
+                  (ngModelChange)="updateOrderSearch($event)"
+                  class="profile-input"
+                  placeholder="Search..."
+                  type="search" />
+              </label>
+
+              <button class="profile-icon-button" (click)="applyOrderSearch()" type="button" aria-label="Search">
+                <img alt="" src="assets/icons/search-brand.svg" />
+              </button>
+
+              <div class="profile-toolbar__dropdown-wrap">
+                <button class="profile-icon-button" (click)="toggleOrderSortMenu($event)" type="button" aria-label="Sort orders">
+                  <img alt="" src="assets/icons/sorting-brand.svg" />
+                </button>
+
+                @if (isOrderSortMenuOpen()) {
+                  <div class="profile-dropdown">
+                    <div class="profile-radio-list">
+                      @for (option of orderSortOptions; track option.value) {
+                        <label class="profile-radio">
+                          <input
+                            [checked]="orderSelectedSort() === option.value"
+                            (change)="updateOrderSort(option.value)"
+                            name="profile-order-sort"
+                            type="radio" />
+                          <span class="profile-radio__mark"></span>
+                          <span>{{ option.label }}</span>
+                        </label>
+                      }
+                    </div>
+
+                    <div class="profile-dropdown__actions">
+                      <button class="profile-big-button" (click)="applyOrderSort()" type="button">Apply</button>
+                      <button class="profile-gray-button" (click)="resetOrderSort()" type="button">Reset</button>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <div class="profile-toolbar__dropdown-wrap">
+                <button
+                  class="profile-icon-button"
+                  (click)="toggleOrderFilterMenu($event)"
+                  type="button"
+                  aria-label="Filter orders">
+                  <img alt="" src="assets/icons/filter-brand.svg" />
+                </button>
+
+                @if (isOrderFilterMenuOpen()) {
+                  <div class="profile-dropdown">
+                    <div class="profile-field">
+                      <h4>Status</h4>
+                      <div class="profile-select-wrap">
+                        <select
+                          [ngModel]="orderSelectedState()"
+                          (ngModelChange)="updateOrderState($event)"
+                          class="profile-select">
+                          @for (option of orderStateOptions; track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                          }
+                        </select>
+                        <img alt="" src="assets/icons/down.svg" />
+                      </div>
+                    </div>
+
+                    <div class="profile-field">
+                      <h4>Price</h4>
+                      <div class="profile-price-row">
+                        <input
+                          [ngModel]="orderMinPrice()"
+                          (ngModelChange)="updateOrderMinPrice($event)"
+                          class="profile-input"
+                          placeholder="Min"
+                          type="number" />
+                        <input
+                          [ngModel]="orderMaxPrice()"
+                          (ngModelChange)="updateOrderMaxPrice($event)"
+                          class="profile-input"
+                          placeholder="Max"
+                          type="number" />
+                      </div>
+                    </div>
+
+                    <div class="profile-dropdown__actions">
+                      <button class="profile-big-button" (click)="applyOrderFilters()" type="button">Apply</button>
+                      <button class="profile-gray-button" (click)="resetOrderFilters()" type="button">Reset</button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          @if (filteredBuyerOrders().length > 0) {
+            <div class="product-list">
+              @for (order of filteredBuyerOrders(); track order.id) {
+                <article
+                  class="product-row product-row--order product-row--buyer-order"
+                  [class.product-row--order-muted]="buyerOrderState(order) === 'refusal' || buyerOrderState(order) === 'arrived' || buyerOrderState(order) === 'bought'">
+                  <div class="product-row__media">
+                    @if (orderImageUrl(order); as imageUrl) {
+                      <img [alt]="order.listingTitle" [src]="imageUrl" />
+                    } @else {
+                      <div class="product-row__placeholder">BSE</div>
+                    }
+                  </div>
+
+                  <div class="product-row__content">
+                    <div class="product-row__main">
+                      <h3>{{ order.listingTitle }}</h3>
+                      <span
+                        class="order-status-badge"
+                        [class.order-status-badge--pending]="buyerOrderState(order) === 'pending'"
+                        [class.order-status-badge--delivery]="buyerOrderState(order) === 'in-delivery'"
+                        [class.order-status-badge--refusal]="buyerOrderState(order) === 'refusal'"
+                        [class.order-status-badge--arrived]="buyerOrderState(order) === 'arrived'"
+                        [class.order-status-badge--bought]="buyerOrderState(order) === 'bought'">
+                        {{ buyerOrderStateLabel(order) }}
+                      </span>
+                      <p>{{ order.deliveryAddress }} &mdash; {{ order.createdAtUtc | date: 'dd.MM' }}</p>
+                    </div>
+
+                    <div class="product-row__meta">
+                      <strong>{{ order.totalAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                      <div class="product-row__buttons product-row__buttons--hug">
+                        <button class="warning-button" (click)="openBuyerOrder(order.id)" type="button">Track</button>
+                        @if (canReviewBuyerOrder(order)) {
+                          <button class="review-button" (click)="requestReviewOrder(order)" type="button">Review</button>
+                        }
+                        @if (canRefuseBuyerOrder(order)) {
+                          <button class="danger-button" (click)="requestCancelOrder(order)" type="button">Refuse</button>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          } @else {
+            <article class="empty-state">
+              <div>
+                <h3>There are no orders</h3>
+                <p>Place your order, track it, and wait for arrival notification.</p>
+              </div>
+              <img alt="" src="assets/images/empty-profile-orders-sold.png" />
+              <div class="empty-state__actions">
+                <button class="profile-big-button" (click)="browseProducts()" type="button">Browse Products</button>
+                <button class="profile-brand-button" (click)="goToCart()" type="button">Go to Cart</button>
+              </div>
+            </article>
+          }
+        </section>
+      } @else if (activeTab() === 'sold') {
+        <section class="profile-section">
+          <h2 class="profile-section__title">Sold</h2>
+
+          <div class="profile-toolbar profile-toolbar--sold">
+            <div class="profile-toolbar__controls">
+              <label class="profile-toolbar__search">
+                <span class="visually-hidden">Search sold products</span>
+                <input
+                  [ngModel]="soldSearchTerm()"
+                  (keydown.enter)="$event.preventDefault(); applySoldSearch()"
+                  (ngModelChange)="updateSoldSearch($event)"
+                  class="profile-input"
+                  placeholder="Search..."
+                  type="search" />
+              </label>
+
+              <button class="profile-icon-button" (click)="applySoldSearch()" type="button" aria-label="Search">
+                <img alt="" src="assets/icons/search-brand.svg" />
+              </button>
+
+              <div class="profile-toolbar__dropdown-wrap">
+                <button class="profile-icon-button" (click)="toggleSoldSortMenu($event)" type="button" aria-label="Sort sold products">
+                  <img alt="" src="assets/icons/sorting-brand.svg" />
+                </button>
+
+                @if (isSoldSortMenuOpen()) {
+                  <div class="profile-dropdown">
+                    <div class="profile-radio-list">
+                      @for (option of soldSortOptions; track option.value) {
+                        <label class="profile-radio">
+                          <input
+                            [checked]="soldSelectedSort() === option.value"
+                            (change)="updateSoldSort(option.value)"
+                            name="profile-sold-sort"
+                            type="radio" />
+                          <span class="profile-radio__mark"></span>
+                          <span>{{ option.label }}</span>
+                        </label>
+                      }
+                    </div>
+
+                    <div class="profile-dropdown__actions">
+                      <button class="profile-big-button" (click)="applySoldSort()" type="button">Apply</button>
+                      <button class="profile-gray-button" (click)="resetSoldSort()" type="button">Reset</button>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <div class="profile-toolbar__dropdown-wrap">
+                <button
+                  class="profile-icon-button"
+                  (click)="toggleSoldFilterMenu($event)"
+                  type="button"
+                  aria-label="Filter sold products">
+                  <img alt="" src="assets/icons/filter-brand.svg" />
+                </button>
+
+                @if (isSoldFilterMenuOpen()) {
+                  <div class="profile-dropdown">
+                    <div class="profile-field">
+                      <h4>Status</h4>
+                      <div class="profile-select-wrap">
+                        <select
+                          [ngModel]="soldSelectedState()"
+                          (ngModelChange)="updateSoldState($event)"
+                          class="profile-select">
+                          @for (option of soldStateOptions; track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                          }
+                        </select>
+                        <img alt="" src="assets/icons/down.svg" />
+                      </div>
+                    </div>
+
+                    <div class="profile-field">
+                      <h4>Price</h4>
+                      <div class="profile-price-row">
+                        <input
+                          [ngModel]="soldMinPrice()"
+                          (ngModelChange)="updateSoldMinPrice($event)"
+                          class="profile-input"
+                          placeholder="Min"
+                          type="number" />
+                        <input
+                          [ngModel]="soldMaxPrice()"
+                          (ngModelChange)="updateSoldMaxPrice($event)"
+                          class="profile-input"
+                          placeholder="Max"
+                          type="number" />
+                      </div>
+                    </div>
+
+                    <div class="profile-dropdown__actions">
+                      <button class="profile-big-button" (click)="applySoldFilters()" type="button">Apply</button>
+                      <button class="profile-gray-button" (click)="resetSoldFilters()" type="button">Reset</button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          @if (filteredSoldOrders().length > 0) {
+            <div class="product-list">
+              @for (order of filteredSoldOrders(); track order.id) {
+                <article
+                  class="product-row product-row--order product-row--sold"
+                  [class.product-row--sold-final]="soldOrderState(order) === 'sold'">
+                  <div class="product-row__media">
+                    @if (orderImageUrl(order); as imageUrl) {
+                      <img [alt]="order.listingTitle" [src]="imageUrl" />
+                    } @else {
+                      <div class="product-row__placeholder">BSE</div>
+                    }
+                  </div>
+
+                  <div class="product-row__content">
+                    <div class="product-row__main">
+                      <h3>{{ order.listingTitle }}</h3>
+                      <span
+                        class="sold-status-badge"
+                        [class.sold-status-badge--ordered]="soldOrderState(order) === 'ordered'"
+                        [class.sold-status-badge--awaiting]="soldOrderState(order) === 'awaiting-shipment'"
+                        [class.sold-status-badge--delivery]="soldOrderState(order) === 'in-delivery'"
+                        [class.sold-status-badge--refusal]="soldOrderState(order) === 'refusal'"
+                        [class.sold-status-badge--sold]="soldOrderState(order) === 'sold'">
+                        {{ soldOrderStateLabel(order) }}
+                      </span>
+                      <p>{{ order.deliveryAddress }} &mdash; {{ order.createdAtUtc | date: 'dd.MM' }}</p>
+                    </div>
+
+                    <div class="product-row__meta">
+                      <strong>{{ order.totalAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                      <div class="product-row__buttons product-row__buttons--hug">
+                        @if (canAcceptOrder(order)) {
+                          <button class="profile-brand-button" (click)="openShipmentConfirmation(order.id)" type="button">Accept</button>
+                        }
+                        @if (canTrackSoldOrder(order)) {
+                          <button class="warning-button" (click)="openSellerOrder(order.id)" type="button">Details</button>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          } @else {
+            <article class="empty-state">
+              <div>
+                <h3>The products were not sold</h3>
+                <p>Please check your products page, maybe something is wrong.</p>
+              </div>
+              <img alt="" src="assets/images/empty-profile-orders-sold.png" />
+            </article>
+          }
+        </section>
+      } @else if (activeTab() === 'chats') {
+        <section class="profile-section profile-section--chats">
+          <div class="profile-section__title-row">
+            <h2 class="profile-section__title">Chats</h2>
+            <button class="profile-icon-button" (click)="contactSupport()" type="button" aria-label="Support">
+              <img alt="" src="assets/icons/support.svg" />
+            </button>
+          </div>
+
+          <div class="chat-layout" [class.chat-layout--open]="activeChatId()">
+            <aside class="chat-sidebar">
+              <div class="chat-filters">
+                @for (option of chatRoleOptions; track option.value) {
+                  <button
+                    class="chat-filters__button"
+                    [class.chat-filters__button--active]="chatRoleFilter() === option.value"
+                    (click)="setChatRoleFilter(option.value)"
+                    type="button">
+                    {{ option.label }}
+                    @if (option.value === 'all' && hasUnseenChats()) {
+                      <span class="chat-filters__dot"></span>
+                    }
+                  </button>
+                }
+              </div>
+
+              <div class="chat-list">
+                @if (visibleChats().length > 0) {
+                  @for (chat of visibleChats(); track chat.id) {
+                    <button
+                      class="chat-item"
+                      [class.chat-item--active]="activeChatId() === chat.id"
+                      (click)="openChat(chat.id)"
+                      type="button">
+                      <div class="chat-item__image-wrap">
+                        @if (chatListingImageUrl(chat); as imageUrl) {
+                          <img [alt]="chat.listingTitle || chat.counterpartyName" [src]="imageUrl" />
+                        } @else {
+                          <div class="chat-item__placeholder">BSE</div>
+                        }
+                      </div>
+
+                      <div class="chat-item__content">
+                        <h3>{{ chat.listingTitle || chat.counterpartyName }}</h3>
+                        <p>{{ chat.lastMessagePreview || 'No messages yet' }}</p>
+                      </div>
+
+                      <div class="chat-item__meta">
+                        @if (chat.unreadCount > 0) {
+                          <span class="chat-unread-dot"></span>
+                        }
+                        <time>{{ chat.lastMessageAtUtc | date: 'HH:mm' }}</time>
+                      </div>
+                    </button>
+                  }
+                } @else {
+                  <article class="chat-empty-state">
+                    <div>
+                      <h3>No messages yet</h3>
+                      <p>Once you write a message, it will appear here.</p>
+                    </div>
+                    <img alt="" src="assets/images/empty-profile-chats.png" />
+                  </article>
+                }
+              </div>
+            </aside>
+
+            <section class="chat-panel">
+              @if (chats().length > 0) {
+                @if (activeChat(); as currentChat) {
+                  <header class="chat-panel__header" (click)="openPublicProfile(currentChat.counterpartyId)">
+                    <div class="chat-panel__title-row">
+                      <button class="chat-panel__back" (click)="closeMobileChat($event)" type="button" aria-label="Back to chats">
+                        <img alt="" src="assets/icons/left.svg" />
+                      </button>
+                      <h3>{{ currentChat.counterpartyName }}</h3>
+                    </div>
+
+                    <button
+                      class="profile-brand-button"
+                      [disabled]="!currentChat.listingId"
+                      (click)="openChatCheckout(currentChat, $event)"
+                      type="button">
+                      Buy
+                    </button>
+                  </header>
+
+                  @if (currentChat.listingTitle) {
+                    <button class="chat-product-card" (click)="openChatListing(currentChat)" type="button">
+                      <div class="chat-product-card__image-wrap">
+                        @if (chatListingImageUrl(currentChat); as imageUrl) {
+                          <img [alt]="currentChat.listingTitle" [src]="imageUrl" />
+                        } @else {
+                          <div class="chat-product-card__placeholder">BSE</div>
+                        }
+                      </div>
+
+                      <div class="chat-product-card__copy">
+                        <h4>{{ currentChat.listingTitle }}</h4>
+                        <p>{{ chatProductLocation(currentChat) }}</p>
+                        @if (chatProductPrice(currentChat); as price) {
+                          <strong>{{ price | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                        }
+                      </div>
+                    </button>
+                  }
+
+                  <div #chatMessagesViewport class="chat-panel__messages">
+                    @if (isMessagesLoading()) {
+                      <div class="chat-panel__loading"></div>
+                    } @else if (chatMessages().length > 0) {
+                      @for (message of chatMessages(); track message.id; let index = $index) {
+                        @if (shouldShowDateDivider(index)) {
+                          <div class="chat-date-divider">
+                            <span>{{ message.sentAtUtc | date: 'dd MMMM' }}</span>
+                          </div>
+                        }
+                        @if (shouldShowNewMarker(index)) {
+                          <span class="chat-new-marker">New</span>
+                        }
+                        <article class="message-bubble" [class.message-bubble--own]="isOwnMessage(message)">
+                          @if (message.content) {
+                            <p>{{ message.content }}</p>
+                          }
+                          @if (attachmentUrl(message); as uploadedUrl) {
+                            @if (isImageMessage(message)) {
+                              <a [href]="uploadedUrl" rel="noreferrer" target="_blank">
+                                <img class="message-bubble__image" [alt]="message.type" [src]="uploadedUrl" />
+                              </a>
+                            } @else {
+                              <a
+                                class="attachment-card"
+                                [class.attachment-card--unknown]="attachmentKind(message) === 'unknown'"
+                                [href]="uploadedUrl"
+                                rel="noreferrer"
+                                target="_blank">
+                                <span class="attachment-card__icon">{{ attachmentIconLabel(message) }}</span>
+                                <span class="attachment-card__body">
+                                  <strong>{{ attachmentTypeLabel(message) }}</strong>
+                                  <span>Open attachment</span>
+                                </span>
+                              </a>
+                            }
+                          }
+                          <time>{{ message.sentAtUtc | date: 'HH:mm' }}</time>
+                        </article>
+                        @if (isLastReadOwnMessage(message, index)) {
+                          <span class="message-status">Viewed</span>
+                        }
+                      }
+                    } @else {
+                      <article class="empty-panel empty-panel--compact">
+                        <img alt="" src="assets/images/empty-sad.png" />
+                        <div>
+                          <h3>No messages yet</h3>
+                          <p>Start the conversation with the first message in this listing chat.</p>
+                        </div>
+                      </article>
+                    }
+                  </div>
+
+                  <div class="chat-composer">
+                    <input #chatImageInput (change)="sendAttachment(chatImageInput)" accept=".jpg,.jpeg,.png,.webp,.gif" class="visually-hidden" type="file" />
+                    <input #chatAttachmentInput (change)="sendAttachment(chatAttachmentInput)" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.txt,.zip" class="visually-hidden" type="file" />
+                    <button
+                      class="profile-icon-button"
+                      [disabled]="!activeChatId() || isUploadingAttachment() || isSendingMessage()"
+                      (click)="chatImageInput.click()"
+                      type="button"
+                      aria-label="Attach image">
+                      <img alt="" src="assets/icons/image.svg" />
+                    </button>
+                    <button
+                      class="profile-icon-button"
+                      [disabled]="!activeChatId() || isUploadingAttachment() || isSendingMessage()"
+                      (click)="chatAttachmentInput.click()"
+                      type="button"
+                      aria-label="Attach file">
+                      <img alt="" src="assets/icons/chip.svg" />
+                    </button>
+                    <input
+                      [ngModel]="messageDraft()"
+                      (keydown.enter)="$event.preventDefault(); sendMessage()"
+                      (ngModelChange)="updateMessageDraft($event)"
+                      class="profile-input chat-composer__input"
+                      placeholder="Write..."
+                      type="text" />
+                    <button
+                      class="profile-icon-button"
+                      [disabled]="!canSendMessage()"
+                      (click)="sendMessage()"
+                      aria-label="Send message"
+                      type="button">
+                      <img alt="" src="assets/icons/send.svg" />
+                    </button>
+                  </div>
+                } @else {
+                  <article class="chat-panel-empty">
+                    <h2>No messages yet</h2>
+                  </article>
+                }
+              } @else {
+                <article class="chat-panel-empty">
+                  <h2>No messages yet</h2>
+                </article>
+              }
+            </section>
+          </div>
+        </section>
+      } @else if (activeTab() === 'reviews') {
+        <section class="profile-section profile-section--reviews">
+          <h2 class="profile-section__title">Reviews</h2>
+
+          @if (reviews().length > 0) {
+            <div class="reviews-layout">
+              <article class="reviews-summary">
+                <div class="reviews-summary__main">
+                  <strong>{{ reviewAverageLabel() }}</strong>
+                  <div class="review-stars" aria-label="Average rating">
+                    @for (star of reviewStars(reviewAverage()); track star) {
+                      <span class="review-star" [class.review-star--active]="star <= roundedReviewAverage()"></span>
+                    }
+                  </div>
+                  <p>Number of reviews: {{ reviews().length }}</p>
+                </div>
+                <p class="reviews-summary__hint">Click on the review to dispute it.</p>
+              </article>
+
+              <div class="review-list">
+                @for (review of reviews(); track review.id) {
+                  <article
+                    class="review-card"
+                    [class.review-card--actionable]="canDisputeReview(review)"
+                    (click)="requestDisputeReview(review)">
+                    <div class="review-card__header">
+                      <div class="review-stars" aria-label="Review rating">
+                        @for (star of reviewStars(review.rating); track star) {
+                          <span class="review-star" [class.review-star--active]="star <= review.rating"></span>
+                        }
+                      </div>
+                      <time>{{ review.createdAtUtc | date: 'MM/yy' }}</time>
+                    </div>
+                    <h3>{{ review.listingTitle || 'Product Name' }}</h3>
+                    <p class="review-card__comment">{{ review.comment }}</p>
+                    @if (review.disputeReason) {
+                      <span class="review-card__dispute">Dispute reason: {{ review.disputeReason }}</span>
+                    }
+                  </article>
+                }
+              </div>
+            </div>
+          } @else {
+            <article class="empty-state">
+              <div>
+                <h3>There are no reviews</h3>
+                <p>Reviews will be visible when someone leaves a rating.</p>
+              </div>
+              <img alt="" src="assets/images/empty-profile-reviews.png" />
+            </article>
+          }
+        </section>
+      }
+    }
+
+    @if (pendingDeleteListing(); as listingToDelete) {
+      <div class="dialog-backdrop" (click)="closeDeleteDialog()">
+        <article class="dialog-card" (click)="$event.stopPropagation()">
+          <button class="dialog-card__close" (click)="closeDeleteDialog()" type="button" aria-label="Close popup">
+            <img alt="" src="assets/icons/close.svg" />
+          </button>
+          <h2>Delete listing?</h2>
+          <p>
+            "{{ listingToDelete.title }}" will be removed from your marketplace profile together with
+            uploaded listing images.
+          </p>
+          <div class="dialog-card__actions">
+            <button class="secondary-button" (click)="closeDeleteDialog()" type="button">Cancel</button>
+            <button
+              class="danger-button"
+              [disabled]="isDeletingListing()"
+              (click)="confirmDeleteListing()"
+              type="button">
+              Delete
+            </button>
+          </div>
+        </article>
+      </div>
+    }
+
+    @if (pendingCancelOrder(); as orderToCancel) {
+      <div class="dialog-backdrop" (click)="closeCancelOrderDialog()">
+        <article class="dialog-card" (click)="$event.stopPropagation()">
+          <button class="dialog-card__close" (click)="closeCancelOrderDialog()" type="button" aria-label="Close popup">
+            <img alt="" src="assets/icons/close.svg" />
+          </button>
+          <h2>Refuse order?</h2>
+          <p>"{{ orderToCancel.listingTitle }}" will be cancelled and returned to marketplace availability.</p>
+          <div class="dialog-card__actions">
+            <button class="secondary-button" (click)="closeCancelOrderDialog()" type="button">Cancel</button>
+            <button
+              class="danger-button"
+              [disabled]="isUpdatingOrder()"
+              (click)="confirmCancelOrder()"
+              type="button">
+              Refuse
+            </button>
+          </div>
+        </article>
+      </div>
+    }
+
+    @if (pendingReviewOrder(); as orderToReview) {
+      <div class="dialog-backdrop" (click)="closeReviewDialog()">
+        <article class="dialog-card" (click)="$event.stopPropagation()">
+          <button class="dialog-card__close" (click)="closeReviewDialog()" type="button" aria-label="Close popup">
+            <img alt="" src="assets/icons/close.svg" />
+          </button>
+          <h2>Leave a review?</h2>
+          <p>Rate the seller after buying "{{ orderToReview.listingTitle }}".</p>
+          <label class="dialog-field">
+            <span>Rating</span>
+            <select
+              [ngModel]="reviewRating()"
+              (ngModelChange)="updateReviewRating($event)"
+              class="profile-select">
+              <option [ngValue]="5">5 - Excellent</option>
+              <option [ngValue]="4">4 - Good</option>
+              <option [ngValue]="3">3 - Normal</option>
+              <option [ngValue]="2">2 - Bad</option>
+              <option [ngValue]="1">1 - Terrible</option>
+            </select>
+          </label>
+          <label class="dialog-field">
+            <span>Comment</span>
+            <textarea
+              [ngModel]="reviewComment()"
+              (ngModelChange)="updateReviewComment($event)"
+              class="dialog-textarea"
+              placeholder="Tell other buyers about your experience"
+              rows="4"></textarea>
+          </label>
+          <div class="dialog-card__actions">
+            <button class="secondary-button" (click)="closeReviewDialog()" type="button">Cancel</button>
+            <button
+              class="primary-button"
+              [disabled]="isSubmittingReview() || !reviewComment().trim()"
+              (click)="confirmReviewOrder()"
+              type="button">
+              Review
+            </button>
+          </div>
+        </article>
+      </div>
+    }
+
+    @if (pendingDisputeReview(); as reviewToDispute) {
+      <div class="dialog-backdrop" (click)="closeDisputeDialog()">
+        <article class="dialog-card" (click)="$event.stopPropagation()">
+          <button class="dialog-card__close" (click)="closeDisputeDialog()" type="button" aria-label="Close popup">
+            <img alt="" src="assets/icons/close.svg" />
+          </button>
+          <h2>Dispute review?</h2>
+          <p>Explain why the review from {{ reviewToDispute.authorName }} should be checked by moderation.</p>
+          <label class="dialog-field">
+            <span>Reason</span>
+            <textarea
+              [ngModel]="disputeReason()"
+              (ngModelChange)="updateDisputeReason($event)"
+              class="dialog-textarea"
+              placeholder="Describe the issue with this review"
+              rows="4"></textarea>
+          </label>
+          <div class="dialog-card__actions">
+            <button class="secondary-button" (click)="closeDisputeDialog()" type="button">Cancel</button>
+            <button
+              class="danger-button"
+              [disabled]="isSubmittingDispute() || !disputeReason().trim()"
+              (click)="confirmDisputeReview()"
+              type="button">
+              Dispute
+            </button>
+          </div>
+        </article>
+      </div>
+    }
+
+    @if (isLogoutDialogOpen()) {
+      <div class="dialog-backdrop" (click)="closeLogoutDialog()">
+        <article class="dialog-card" (click)="$event.stopPropagation()">
+          <button class="dialog-card__close" (click)="closeLogoutDialog()" type="button" aria-label="Close popup">
+            <img alt="" src="assets/icons/close.svg" />
+          </button>
+          <h2>Log out?</h2>
+          <p>You will return to the authentication page and your current session will be removed from this browser tab.</p>
+          <div class="dialog-card__actions">
+            <button class="secondary-button" (click)="closeLogoutDialog()" type="button">Cancel</button>
+            <button class="danger-button" (click)="confirmLogout()" type="button">Log out</button>
+          </div>
+        </article>
+      </div>
+    }
+  </section>
+</app-site-shell>

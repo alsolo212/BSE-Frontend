@@ -1,0 +1,71 @@
+<app-site-shell>
+  <section class="dispute-page">
+    @if (errorMessage()) {
+      <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+    }
+
+    @if (isLoading()) {
+      <article class="dispute-card dispute-card--loading"></article>
+    } @else if (dispute(); as currentDispute) {
+      <article class="dispute-card">
+        <header class="dispute-card__header">
+          <h1>Dispute</h1>
+          <p>
+            Review the dispute and decide whether to remove the review.<br />
+            Copy email if blocking is required.
+          </p>
+        </header>
+
+        <article class="review-card">
+          <div class="review-card__header">
+            <div class="review-stars" aria-label="Review rating">
+              @for (star of reviewStars(currentDispute.rating); track star) {
+                <span class="review-star" [class.review-star--active]="star > 0"></span>
+              }
+            </div>
+            <time>{{ currentDispute.createdAtUtc | date: 'MM/yy' }}</time>
+          </div>
+          <h3>{{ currentDispute.listingTitle || 'Product Name' }}</h3>
+          <p>{{ currentDispute.comment }}</p>
+        </article>
+
+        <section class="dispute-section">
+          <h2>Reviewer</h2>
+          <input class="dispute-input" [value]="reviewer()?.userName || ''" placeholder="Name" disabled type="text" />
+          <div class="dispute-copy-row">
+            <input class="dispute-input" [value]="reviewerEmail()" placeholder="Email" disabled type="text" />
+            <button
+              class="dispute-icon-button"
+              [disabled]="!reviewerEmail()"
+              (click)="copyEmail('reviewer')"
+              type="button"
+              aria-label="Copy reviewer email">
+              <img alt="" src="assets/icons/copy.svg" />
+            </button>
+          </div>
+        </section>
+
+        <section class="dispute-section">
+          <h2>Reporter</h2>
+          <input class="dispute-input" [value]="reporter()?.userName || ''" placeholder="Name" disabled type="text" />
+          <div class="dispute-copy-row">
+            <input class="dispute-input" [value]="reporterEmail()" placeholder="Email" disabled type="text" />
+            <button
+              class="dispute-icon-button"
+              [disabled]="!reporterEmail()"
+              (click)="copyEmail('reporter')"
+              type="button"
+              aria-label="Copy reporter email">
+              <img alt="" src="assets/icons/copy.svg" />
+            </button>
+          </div>
+        </section>
+
+        <div class="dispute-actions">
+          <button class="profile-gray-button" [disabled]="isSubmitting()" (click)="declineDispute()" type="button">Decline</button>
+          <button class="profile-big-button" [disabled]="isSubmitting()" (click)="removeReview()" type="button">Remove Review</button>
+        </div>
+      </article>
+    }
+  </section>
+</app-site-shell>

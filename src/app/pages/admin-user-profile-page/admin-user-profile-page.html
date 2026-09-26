@@ -1,0 +1,275 @@
+<app-site-shell>
+  <section class="profile-page">
+    <button class="back-link" (click)="goBack()" type="button">
+      <img alt="" src="assets/icons/left.svg" />
+      Back to users
+    </button>
+
+    @if (errorMessage()) {
+      <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+    }
+
+    @if (isLoading()) {
+      <article class="profile-card profile-card--loading"></article>
+    } @else if (profile(); as currentProfile) {
+      <article class="profile-card">
+        <div class="profile-card__identity">
+          @if (avatarUrl(); as profileImageUrl) {
+            <img class="profile-card__avatar" [alt]="currentProfile.userName" [src]="profileImageUrl" />
+          } @else {
+            <div class="profile-card__avatar profile-card__avatar--fallback">{{ userInitial() }}</div>
+          }
+
+          <div class="profile-card__copy">
+            <h2>{{ currentProfile.userName }}</h2>
+            <p>{{ currentProfile.email }}</p>
+            <span class="profile-card__meta">
+              Joined {{ currentProfile.createdAtUtc | date: 'dd.MM.yyyy' }} -
+              {{ currentProfile.activeListingsCount }} active listings
+            </span>
+          </div>
+        </div>
+
+        <div class="profile-card__actions">
+          <button class="warning-button" (click)="openEditUser()" type="button">Edit</button>
+          <button class="danger-button" [disabled]="isUpdating()" (click)="toggleUserBlock()" type="button">
+            {{ currentProfile.isBlocked ? 'Unblock' : 'Block' }}
+          </button>
+        </div>
+      </article>
+
+      <section class="profile-tabs">
+        @for (tab of tabs; track tab.key) {
+          <button
+            class="profile-tabs__button"
+            [class.profile-tabs__button--active]="activeTab() === tab.key"
+            (click)="setActiveTab(tab.key)"
+            type="button">
+            {{ tab.label }}
+          </button>
+        }
+      </section>
+
+      @if (activeTab() === 'products') {
+        <section class="profile-section">
+          @if (listings().length > 0) {
+            <div class="product-list">
+              @for (listing of listings(); track listing.id) {
+                <article class="product-row" (click)="openListing(listing.id)">
+                  <div class="product-row__media">
+                    @if (listingImageUrl(listing); as imageUrl) {
+                      <img [alt]="listing.title" [src]="imageUrl" />
+                    } @else {
+                      <div class="product-row__placeholder">BSE</div>
+                    }
+                  </div>
+
+                  <div class="product-row__content">
+                    <div class="product-row__main">
+                      <div class="product-row__chips">
+                        <span class="status-chip">{{ formatCondition(listing.condition) }}</span>
+                        <span class="status-chip">{{ listing.categoryName }}</span>
+                        <span class="status-chip">{{ formatStatus(listing.status) }}</span>
+                      </div>
+                      <h3>{{ listing.title }}</h3>
+                      <p>{{ listing.city }} - {{ listing.createdAtUtc | date: 'dd.MM.yyyy' }}</p>
+                    </div>
+
+                    <div class="product-row__meta">
+                      <strong>{{ listing.price | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                      <button class="danger-button" [disabled]="isUpdating()" (click)="toggleListingBlock(listing); $event.stopPropagation()" type="button">
+                        {{ listing.status === 'Blocked' ? 'Unblock' : 'Block' }}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          } @else {
+            <article class="empty-panel">
+              <img alt="" src="assets/images/empty-marketplace.png" />
+              <div>
+                <h3>No products</h3>
+                <p>This user has no visible products right now.</p>
+              </div>
+            </article>
+          }
+        </section>
+      } @else if (activeTab() === 'orders') {
+        <section class="profile-section">
+          @if (buyerOrders().length > 0) {
+            <div class="product-list">
+              @for (order of buyerOrders(); track order.id) {
+                <article class="product-row product-row--order">
+                  <div class="product-row__media">
+                    @if (orderImageUrl(order); as imageUrl) {
+                      <img [alt]="order.listingTitle" [src]="imageUrl" />
+                    } @else {
+                      <div class="product-row__placeholder">BSE</div>
+                    }
+                  </div>
+                  <div class="product-row__content">
+                    <div class="product-row__main">
+                      <div class="product-row__chips">
+                        <span class="status-chip">{{ formatOrderStatus(order.status) }}</span>
+                        <span class="status-chip">{{ formatShipmentStatus(order.shipmentStatus) }}</span>
+                        <span class="status-chip">{{ formatPaymentMethod(order.paymentMethod) }}</span>
+                      </div>
+                      <h3>{{ order.listingTitle }}</h3>
+                      <p>{{ order.deliveryCity }} - {{ order.createdAtUtc | date: 'dd.MM.yyyy' }}</p>
+                    </div>
+                    <div class="product-row__meta">
+                      <strong>{{ order.totalAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          } @else {
+            <article class="empty-panel">
+              <img alt="" src="assets/images/empty-sad.png" />
+              <div>
+                <h3>No orders</h3>
+                <p>This user has no buyer orders yet.</p>
+              </div>
+            </article>
+          }
+        </section>
+      } @else if (activeTab() === 'sold') {
+        <section class="profile-section">
+          @if (soldOrders().length > 0) {
+            <div class="product-list">
+              @for (order of soldOrders(); track order.id) {
+                <article class="product-row product-row--order">
+                  <div class="product-row__media">
+                    @if (orderImageUrl(order); as imageUrl) {
+                      <img [alt]="order.listingTitle" [src]="imageUrl" />
+                    } @else {
+                      <div class="product-row__placeholder">BSE</div>
+                    }
+                  </div>
+                  <div class="product-row__content">
+                    <div class="product-row__main">
+                      <div class="product-row__chips">
+                        <span class="status-chip">{{ formatOrderStatus(order.status) }}</span>
+                        <span class="status-chip">{{ formatShipmentStatus(order.shipmentStatus) }}</span>
+                      </div>
+                      <h3>{{ order.listingTitle }}</h3>
+                      <p>{{ order.counterpartyName }} - {{ order.deliveryCity }}</p>
+                    </div>
+                    <div class="product-row__meta">
+                      <strong>{{ order.totalAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          } @else {
+            <article class="empty-panel">
+              <img alt="" src="assets/images/empty-sad.png" />
+              <div>
+                <h3>No sold orders</h3>
+                <p>This user has no seller orders yet.</p>
+              </div>
+            </article>
+          }
+        </section>
+      } @else if (activeTab() === 'chats') {
+        <section class="profile-section">
+          @if (chats().length > 0) {
+            <div class="chat-layout">
+              <aside class="chat-sidebar">
+                @for (chat of chats(); track chat.id) {
+                  <button class="chat-item" [class.chat-item--active]="activeChatId() === chat.id" (click)="openChat(chat.id)" type="button">
+                    <div class="chat-item__avatar">
+                      @if (chatAvatarUrl(chat); as avatarUrl) {
+                        <img [alt]="chat.counterpartyName" [src]="avatarUrl" />
+                      } @else {
+                        <div class="chat-item__avatar-fallback">{{ chat.counterpartyName.charAt(0).toUpperCase() }}</div>
+                      }
+                    </div>
+                    <div class="chat-item__content">
+                      <strong>{{ chat.counterpartyName }}</strong>
+                      <p>{{ chat.lastMessagePreview || 'No messages yet' }}</p>
+                    </div>
+                  </button>
+                }
+              </aside>
+
+              <section class="chat-panel">
+                @if (activeChat(); as currentChat) {
+                  <header class="chat-panel__header">
+                    <h3>{{ currentChat.counterpartyName }}</h3>
+                    @if (currentChat.isSupport) {
+                      <span class="status-chip">Support</span>
+                    }
+                  </header>
+                  <div #chatMessagesViewport class="chat-panel__messages">
+                    @if (isMessagesLoading()) {
+                      <div class="chat-panel__loading"></div>
+                    } @else {
+                      @for (message of chatMessages(); track message.id) {
+                        <article class="message-bubble">
+                          <strong>{{ message.senderName }}</strong>
+                          @if (message.content) {
+                            <p>{{ message.content }}</p>
+                          }
+                          @if (attachmentUrl(message); as url) {
+                            @if (isImageMessage(message)) {
+                              <img class="message-bubble__image" [alt]="message.type" [src]="url" />
+                            } @else {
+                              <a class="attachment-link" [href]="url" rel="noreferrer" target="_blank">Open attachment</a>
+                            }
+                          }
+                          <span>{{ message.sentAtUtc | date: 'dd.MM.yyyy HH:mm' }}</span>
+                        </article>
+                      }
+                    }
+                  </div>
+                }
+              </section>
+            </div>
+          } @else {
+            <article class="empty-panel">
+              <img alt="" src="assets/images/empty-sad.png" />
+              <div>
+                <h3>No chats</h3>
+                <p>This user has no chats yet.</p>
+              </div>
+            </article>
+          }
+        </section>
+      } @else if (activeTab() === 'reviews') {
+        <section class="profile-section">
+          @if (reviews().length > 0) {
+            <div class="review-list">
+              @for (review of reviews(); track review.id) {
+                <article class="review-card">
+                  <div class="review-card__header">
+                    <div>
+                      <strong>{{ review.authorName }}</strong>
+                      <p>{{ review.createdAtUtc | date: 'dd.MM.yyyy' }}</p>
+                    </div>
+                    <div class="review-card__meta">
+                      <span class="status-chip">{{ review.rating }}/5</span>
+                      <span class="status-chip">{{ reviewStatusLabel(review) }}</span>
+                    </div>
+                  </div>
+                  <p class="review-card__comment">{{ review.comment }}</p>
+                </article>
+              }
+            </div>
+          } @else {
+            <article class="empty-panel">
+              <img alt="" src="assets/images/empty-sad.png" />
+              <div>
+                <h3>No reviews</h3>
+                <p>This user has no reviews yet.</p>
+              </div>
+            </article>
+          }
+        </section>
+      }
+    }
+  </section>
+</app-site-shell>

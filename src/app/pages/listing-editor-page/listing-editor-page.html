@@ -1,0 +1,172 @@
+<app-site-shell>
+  <section class="listing-editor-page">
+    <article class="listing-editor-card">
+      <button class="back-button" (click)="goBack()" type="button" aria-label="Go back">
+        <img alt="" src="assets/icons/left.svg" />
+      </button>
+
+      <header class="listing-editor-card__header">
+        <h1>{{ pageTitle() }}</h1>
+        <p>{{ pageSubtitle() }}</p>
+      </header>
+
+      @if (errorMessage()) {
+        <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+      }
+
+      @if (isLoading()) {
+        <div class="listing-editor-card__loading"></div>
+      } @else {
+        <div
+          class="upload-zone"
+          [class.upload-zone--dragging]="isDragging()"
+          (dragover)="handleDragOver($event)"
+          (dragleave)="handleDragLeave($event)"
+          (drop)="handleFileDrop($event)">
+          <input
+            #imagesInput
+            class="visually-hidden"
+            accept=".jpg,.jpeg,.png,.webp"
+            multiple
+            type="file"
+            (change)="handleFileSelection($event)" />
+
+          @if (images().length > 0) {
+            <div class="image-strip">
+              @for (image of images(); track imageTrackBy($index, image); let imageIndex = $index) {
+                <article
+                  class="image-card"
+                  draggable="true"
+                  [class.image-card--dragging]="draggedImageIndex() === imageIndex"
+                  (dragstart)="startImageDrag(imageIndex)"
+                  (dragover)="handleImageDragOver($event)"
+                  (drop)="dropImage(imageIndex)"
+                  (dragend)="endImageDrag()">
+                  <img [alt]="image.fileName" [src]="image.previewUrl" />
+                  <span class="image-card__index">{{ imageIndex + 1 }}</span>
+                  <button class="image-card__remove" (click)="removeImage(imageIndex)" type="button" aria-label="Remove image">
+                    <img alt="" src="assets/icons/bin-red.svg" />
+                  </button>
+                </article>
+              }
+            </div>
+          }
+
+          <img class="upload-zone__icon" alt="" src="assets/icons/image.svg" />
+          <p>Drag & Drop photos here</p>
+          <span>or</span>
+          <button
+            class="brand-button"
+            [disabled]="isUploadingImages()"
+            (click)="openFilePicker(imagesInput)"
+            type="button">
+            {{ isUploadingImages() ? 'Uploading...' : 'Browse file' }}
+          </button>
+        </div>
+
+        <form class="listing-form" [formGroup]="form" (ngSubmit)="submit()">
+          <label class="form-field">
+            <input class="form-input" formControlName="title" placeholder="Title" type="text" />
+            @if (controlHasError('title')) {
+              <p class="field-error">Title is required and should stay within 120 characters.</p>
+            }
+          </label>
+
+          <label class="form-field form-field--select">
+            <select class="form-select" formControlName="categoryId">
+              <option value="">Select Category</option>
+              @for (category of categories(); track category.id) {
+                <option [value]="category.id">{{ category.name }}</option>
+              }
+            </select>
+            <img alt="" src="assets/icons/down.svg" />
+            @if (controlHasError('categoryId')) {
+              <p class="field-error">Choose the category that best matches your product.</p>
+            }
+          </label>
+
+          <label class="form-field">
+            <textarea
+              class="form-input form-textarea"
+              formControlName="description"
+              placeholder="Description"
+              rows="4"></textarea>
+            @if (controlHasError('description')) {
+              <p class="field-error">Description is required and supports up to 4000 characters.</p>
+            }
+          </label>
+
+          <label class="form-field form-field--select">
+            <select class="form-select" formControlName="condition">
+              <option value="">Select Product Condition</option>
+              @for (condition of conditionOptions; track condition.value) {
+                <option [value]="condition.value">{{ condition.label }}</option>
+              }
+            </select>
+            <img alt="" src="assets/icons/down.svg" />
+            @if (controlHasError('condition')) {
+              <p class="field-error">Select whether the product is new or used.</p>
+            }
+          </label>
+
+          <label class="form-field">
+            <input class="form-input" formControlName="price" min="0.01" placeholder="Price" step="0.01" type="number" />
+            @if (controlHasError('price')) {
+              <p class="field-error">Price must be greater than zero.</p>
+            }
+          </label>
+
+          <label class="checkbox-row" [class.checkbox-row--checked]="form.controls.isNegotiable.value">
+            <input formControlName="isNegotiable" type="checkbox" />
+            <span class="checkbox-row__box">
+              @if (form.controls.isNegotiable.value) {
+                <img alt="" src="assets/icons/check-mark.svg" />
+              }
+            </span>
+            <span>Contact price</span>
+          </label>
+
+          <label class="form-field">
+            <input class="form-input" formControlName="quantity" min="1" placeholder="Quantity" step="1" type="number" />
+            @if (controlHasError('quantity')) {
+              <p class="field-error">Quantity must be at least 1.</p>
+            }
+          </label>
+
+          <label class="form-field form-field--select">
+            <select class="form-select" formControlName="city">
+              <option value="">Select Location</option>
+              @for (city of cityOptions; track city) {
+                <option [value]="city">{{ city }}</option>
+              }
+            </select>
+            <img alt="" src="assets/icons/down.svg" />
+            @if (controlHasError('city')) {
+              <p class="field-error">Choose the city where the product is currently located.</p>
+            }
+          </label>
+
+          <button class="big-button" [disabled]="isSubmitting() || isUploadingImages()" type="submit">
+            {{ isSubmitting() ? 'Saving...' : submitLabel() }}
+          </button>
+        </form>
+      }
+    </article>
+
+    @if (isDeleting()) {
+      <div class="dialog-backdrop" (click)="closeDeleteDialog()">
+        <article class="dialog-card" (click)="$event.stopPropagation()">
+          <button class="dialog-card__close" (click)="closeDeleteDialog()" type="button" aria-label="Close popup">
+            <img alt="" src="assets/icons/close.svg" />
+          </button>
+          <h2>Delete listing?</h2>
+          <p>This action removes the product card and uploaded listing images from your profile.</p>
+          <div class="dialog-card__actions">
+            <button class="secondary-button" (click)="closeDeleteDialog()" type="button">Cancel</button>
+            <button class="danger-button" (click)="confirmDelete()" type="button">Delete</button>
+          </div>
+        </article>
+      </div>
+    }
+  </section>
+</app-site-shell>

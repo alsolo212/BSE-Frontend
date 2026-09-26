@@ -1,0 +1,88 @@
+<app-site-shell>
+  <section class="edit-profile-page">
+    <article class="edit-profile-card">
+      <button class="back-button" (click)="goBack()" type="button" aria-label="Back to users">
+        <img alt="" src="assets/icons/left.svg" />
+      </button>
+
+      <header class="edit-profile-card__header">
+        <h1>Edit User</h1>
+        <p>You can update the information.</p>
+      </header>
+
+      @if (errorMessage()) {
+        <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+      }
+
+      @if (isLoading()) {
+        <div class="edit-profile-card__loading"></div>
+      } @else {
+        @if (isSuperAdmin()) {
+          <div class="role-switch">
+            <button
+              class="role-switch__option"
+              [class.role-switch__option--active]="selectedRole() === 'User'"
+              (click)="setRole('User')"
+              type="button">
+              User
+            </button>
+            <button
+              class="role-switch__option"
+              [class.role-switch__option--active]="selectedRole() === 'Admin'"
+              (click)="setRole('Admin')"
+              type="button">
+              Admin
+            </button>
+          </div>
+        }
+
+        <input #fileInput class="visually-hidden" (change)="handleFileSelection($event)" accept=".jpg,.jpeg,.png,.webp" type="file" />
+
+        <div
+          class="upload-zone"
+          [class.upload-zone--dragging]="isDragging()"
+          (dragover)="handleDragOver($event)"
+          (dragleave)="handleDragLeave($event)"
+          (drop)="handleFileDrop($event)">
+          @if (avatarPreviewUrl(); as previewUrl) {
+            <img class="upload-zone__preview" alt="Selected avatar" [src]="previewUrl" />
+          } @else {
+            <img alt="" src="assets/icons/camera.svg" />
+          }
+          <p>Drag & Drop photo here</p>
+          <span>or</span>
+          <button class="primary-button" (click)="openFilePicker(fileInput)" type="button">
+            {{ isUploadingAvatar() ? 'Uploading...' : 'Browse file' }}
+          </button>
+        </div>
+
+        <form class="edit-profile-form" [formGroup]="form" (ngSubmit)="submit()">
+          <label class="form-field">
+            <input class="form-input" formControlName="userName" placeholder="Name" type="text" />
+          </label>
+          @if (controlHasError('userName')) {
+            <p class="field-error">Name is required.</p>
+          }
+
+          <label class="form-field">
+            <input class="form-input" formControlName="email" placeholder="Email" type="email" />
+          </label>
+          @if (controlHasError('email')) {
+            <p class="field-error">Enter a valid email address.</p>
+          }
+
+          <label class="form-field">
+            <input class="form-input" formControlName="phone" placeholder="Phone" type="tel" />
+          </label>
+          @if (controlHasError('phone')) {
+            <p class="field-error">Phone should contain numbers only.</p>
+          }
+
+          <button class="submit-button" [disabled]="isSubmitting()" type="submit">
+            {{ isSubmitting() ? 'Saving...' : 'Edit' }}
+          </button>
+        </form>
+      }
+    </article>
+  </section>
+</app-site-shell>

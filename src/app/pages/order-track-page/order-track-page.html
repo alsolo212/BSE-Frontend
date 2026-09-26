@@ -1,0 +1,94 @@
+<app-site-shell>
+  <section class="track-page">
+    @if (errorMessage()) {
+      <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+    }
+
+    @if (isLoading()) {
+      <article class="track-card track-card--loading"></article>
+    } @else if (order(); as currentOrder) {
+      <article class="track-card">
+        <button class="track-card__back" (click)="goBack()" type="button" aria-label="Back to orders">
+          <img alt="" src="assets/icons/left.svg" />
+        </button>
+
+        <header class="track-card__header">
+          <h1>Track</h1>
+          <p>Track status and check information</p>
+        </header>
+
+        <section class="track-product-card">
+          <div class="track-product-card__info">
+            <div class="track-product-card__image-wrap">
+              @if (listingImageUrl(); as imageUrl) {
+                <img [alt]="currentOrder.listing.title" [src]="imageUrl" />
+              } @else {
+                <div class="track-product-card__placeholder">BSE</div>
+              }
+            </div>
+
+            <div class="track-product-card__copy">
+              <h2>{{ currentOrder.listing.title }}</h2>
+              <p>{{ currentOrder.deliveryAddress }} &mdash; {{ currentOrder.createdAtUtc | date: 'dd.MM.yyyy' }}</p>
+              <strong>{{ currentOrder.listing.price | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+            </div>
+          </div>
+
+          <div class="track-product-card__controls">
+            <div class="cart-quantity">
+              <select class="cart-quantity__select" [disabled]="true">
+                <option [value]="currentOrder.quantity" selected>{{ currentOrder.quantity }}</option>
+              </select>
+              <img alt="" src="assets/icons/down-secondary.svg" />
+            </div>
+          </div>
+        </section>
+
+        <section class="track-section">
+          <h2>Shipping Details</h2>
+          <input
+            class="track-input"
+            [value]="currentOrder.deliveryAddress"
+            disabled
+            placeholder="Full shipping address"
+            type="text" />
+        </section>
+
+        <section class="track-status-row">
+          <span>Track status:</span>
+          <span
+            class="track-status-badge"
+            [class.track-status-badge--pending]="trackState(currentOrder) === 'pending'"
+            [class.track-status-badge--delivery]="trackState(currentOrder) === 'in-delivery'"
+            [class.track-status-badge--refusal]="trackState(currentOrder) === 'refusal'"
+            [class.track-status-badge--arrived]="trackState(currentOrder) === 'arrived'"
+            [class.track-status-badge--bought]="trackState(currentOrder) === 'bought'">
+            {{ trackStateLabel(currentOrder) }}
+          </span>
+        </section>
+
+        <section class="track-section">
+          <h2>Payment Method</h2>
+          <input
+            class="track-input"
+            [value]="paymentValue(currentOrder)"
+            disabled
+            placeholder="Payment Method"
+            type="text" />
+        </section>
+
+        <section class="track-total">
+          <strong>Total price:</strong>
+          <span>{{ currentOrder.totalAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</span>
+        </section>
+
+        <section class="track-section track-section--seller">
+          <h2>Seller</h2>
+          <input class="track-input" [value]="sellerName(currentOrder)" disabled placeholder="Name" type="text" />
+          <input class="track-input" [value]="sellerSurname(currentOrder)" disabled placeholder="Surname" type="text" />
+          <input class="track-input" [value]="sellerPhone(currentOrder)" disabled placeholder="Phone" type="text" />
+        </section>
+      </article>
+    }
+  </section>
+</app-site-shell>

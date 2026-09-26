@@ -1,0 +1,242 @@
+<app-site-shell>
+  <section class="listing-details-page">
+    @if (errorMessage()) {
+      <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+    }
+
+    @if (isLoading()) {
+      <div class="details-skeleton"></div>
+    } @else if (listing(); as currentListing) {
+      <section class="details-hero">
+        <section class="details-gallery">
+          @if (visibleImages().length > 0) {
+            <div class="details-gallery__thumbs">
+              @for (image of visibleImages(); track image.id; let imageIndex = $index) {
+                <button
+                  class="details-gallery__thumb"
+                  [class.details-gallery__thumb--active]="activeImageIndex() === imageIndex"
+                  (click)="selectImage(imageIndex)"
+                  type="button">
+                  <img [alt]="currentListing.title" [src]="imageUrl(image)" />
+                </button>
+              }
+            </div>
+
+            <div class="details-gallery__main">
+              @if (activeImage(); as activeImageValue) {
+                <button class="details-gallery__main-action" (click)="openFullscreenGallery()" type="button">
+                  <img [alt]="currentListing.title" [src]="imageUrl(activeImageValue)" />
+                </button>
+              }
+
+              @if (visibleImages().length > 1) {
+                <button class="details-gallery__arrow details-gallery__arrow--left" (click)="showPreviousImage()" type="button" aria-label="Previous image">
+                  <img alt="" src="assets/icons/left.svg" />
+                </button>
+
+                <button class="details-gallery__arrow details-gallery__arrow--right" (click)="showNextImage()" type="button" aria-label="Next image">
+                  <img alt="" src="assets/icons/right.svg" />
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="details-gallery__main details-gallery__main--empty">No product images uploaded yet</div>
+          }
+        </section>
+
+        <aside class="details-info-card">
+          <span class="details-info-card__date">Published {{ currentListing.createdAtUtc | date: 'dd.MM.yyyy' }}</span>
+          <h1>{{ currentListing.title }}</h1>
+
+          <div class="details-info-card__badges">
+            <span>{{ formatCondition(currentListing.condition) }}</span>
+            <span>{{ currentListing.categoryName }}</span>
+            <span>{{ currentListing.isNegotiable ? 'Contact price' : 'Fixed price' }}</span>
+            <span>Quantity {{ currentListing.quantity }}</span>
+            <span>{{ deliveryState() }}</span>
+          </div>
+
+          <strong class="details-info-card__price">{{ currentListing.price | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+
+          <div class="details-info-card__actions">
+            @if (isOwnerMode()) {
+              @if (canOwnerEdit()) {
+                <button class="details-button details-button--yellow" (click)="openEditMode()" type="button">Edit</button>
+              }
+              <button class="details-button details-button--red" (click)="requestDelete()" type="button">Delete</button>
+            } @else {
+              <button class="details-button details-button--brand" (click)="buyNow()" type="button">Buy</button>
+              <button class="details-button details-button--gray" (click)="addToCart()" type="button">Add to Cart</button>
+            }
+          </div>
+
+          <section class="details-info-card__section">
+            <h2>Description:</h2>
+            <p>{{ currentListing.description }}</p>
+          </section>
+
+          <section class="details-info-card__section">
+            <h2>Location:</h2>
+            <p>{{ currentListing.city }}</p>
+          </section>
+
+          @if (!isOwnerMode()) {
+            <button class="details-info-card__report" (click)="openReportDialog()" type="button">
+              <img alt="" src="assets/icons/flag-danger.svg" />
+              <span>Report</span>
+            </button>
+          }
+        </aside>
+      </section>
+
+      <section class="details-contact">
+        <article class="details-contact__actions">
+          <h2>Contact:</h2>
+          <div class="details-contact__buttons">
+            <button class="details-button details-button--big" (click)="startChat()" type="button">Write</button>
+            <button class="details-button details-button--gray" (click)="openPhoneDialog()" type="button">Phone</button>
+          </div>
+        </article>
+
+        @if (sellerProfile(); as seller) {
+          <article class="details-contact__seller" (click)="openSellerProfile()">
+            @if (sellerAvatarUrl(); as avatarUrl) {
+              <img class="details-contact__avatar" [alt]="seller.userName" [src]="avatarUrl" />
+            } @else {
+              <div class="details-contact__avatar details-contact__avatar--fallback">{{ sellerInitial() }}</div>
+            }
+
+            <div class="details-contact__copy">
+              <h2>{{ seller.userName }}</h2>
+              <p>Joined {{ seller.createdAtUtc | date: 'MMM yyyy' }} - {{ seller.activeListingsCount }} active listings</p>
+            </div>
+          </article>
+        }
+      </section>
+
+      @if (similarProducts().length > 0) {
+        <section class="similar-products">
+          <h2>Similar products</h2>
+
+          <div class="similar-products__grid">
+            @for (product of similarProducts(); track product.id) {
+              <article class="similar-card" (click)="openSimilarListing(product.id)">
+                <div class="similar-card__image">
+                  @if (summaryImageUrl(product); as imageUrl) {
+                    <img [alt]="product.title" [src]="imageUrl" />
+                  } @else {
+                    <div class="similar-card__placeholder">BSE</div>
+                  }
+                </div>
+
+                <div class="similar-card__body">
+                  <h3>{{ productTitle(product.title) }}</h3>
+                  <span>{{ formatCondition(product.condition) }}</span>
+                  <strong>{{ product.price | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                  <p>{{ product.city }} &mdash; {{ product.createdAtUtc | date: 'dd.MM.yyyy' }}</p>
+                </div>
+              </article>
+            }
+          </div>
+        </section>
+      }
+    }
+
+    @if (isPhoneDialogOpen()) {
+      <div class="dialog-backdrop" (click)="closePhoneDialog()">
+        <article class="dialog-card" (click)="$event.stopPropagation()">
+          <button class="dialog-card__close" (click)="closePhoneDialog()" type="button" aria-label="Close popup">
+            <img alt="" src="assets/icons/close.svg" />
+          </button>
+          <div class="dialog-card__content">
+            <div class="dialog-card__header">
+              <h2>Phone Number</h2>
+              <p>Use this number to contact the seller directly.</p>
+            </div>
+            <div class="dialog-inline-field">
+              <span>{{ sellerProfile()?.phone || '+380(XX)XXX-XX-XX' }}</span>
+              <button [disabled]="!sellerProfile()?.phone" (click)="copyPhone()" type="button" aria-label="Copy phone">
+                <img alt="" src="assets/icons/copy.svg" />
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+    }
+
+    @if (isFullscreenGalleryOpen()) {
+      <div class="gallery-overlay" (click)="closeFullscreenGallery()">
+        <div class="gallery-overlay__frame" (click)="$event.stopPropagation()">
+          <button class="gallery-overlay__close" (click)="closeFullscreenGallery()" type="button" aria-label="Close photo view">
+            <img alt="" src="assets/icons/close.svg" />
+          </button>
+
+          @if (activeImage(); as fullscreenImage) {
+            <img class="gallery-overlay__image" [alt]="listing()?.title ?? 'Listing image'" [src]="imageUrl(fullscreenImage)" />
+          }
+
+          @if (visibleImages().length > 1) {
+            <button class="details-gallery__arrow details-gallery__arrow--left gallery-overlay__arrow" (click)="showPreviousImage()" type="button" aria-label="Previous image">
+              <img alt="" src="assets/icons/left.svg" />
+            </button>
+
+            <button class="details-gallery__arrow details-gallery__arrow--right gallery-overlay__arrow" (click)="showNextImage()" type="button" aria-label="Next image">
+              <img alt="" src="assets/icons/right.svg" />
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+    @if (isDeleting()) {
+      <div class="dialog-backdrop" (click)="closeDeleteDialog()">
+        <article class="dialog-card" (click)="$event.stopPropagation()">
+          <button class="dialog-card__close" (click)="closeDeleteDialog()" type="button" aria-label="Close popup">
+            <img alt="" src="assets/icons/close.svg" />
+          </button>
+          <div class="dialog-card__content">
+            <div class="dialog-card__header">
+              <h2>Delete listing?</h2>
+              <p>This action removes the product card and uploaded listing images from your profile.</p>
+            </div>
+          </div>
+          <div class="dialog-card__actions">
+            <button class="secondary-button" (click)="closeDeleteDialog()" type="button">Cancel</button>
+            <button class="danger-button" (click)="confirmDelete()" type="button">Delete</button>
+          </div>
+        </article>
+      </div>
+    }
+
+    @if (isReportDialogOpen()) {
+      <div class="dialog-backdrop" (click)="closeReportDialog()">
+        <article class="dialog-card" (click)="$event.stopPropagation()">
+          <button class="dialog-card__close" (click)="closeReportDialog()" type="button" aria-label="Close popup">
+            <img alt="" src="assets/icons/close.svg" />
+          </button>
+          <div class="dialog-card__content">
+            <div class="dialog-card__header">
+              <h2>Report listing?</h2>
+              <p>Tell us why this listing should be reviewed.</p>
+            </div>
+            <label class="dialog-field">
+              <span>Reason</span>
+              <textarea
+                [ngModel]="reportReason()"
+                (ngModelChange)="updateReportReason($event)"
+                class="dialog-textarea"
+                placeholder="Explain why this listing should be reviewed"
+                rows="4"></textarea>
+            </label>
+          </div>
+          <div class="dialog-card__actions">
+            <button class="secondary-button" (click)="closeReportDialog()" type="button">Cancel</button>
+            <button class="danger-button" [disabled]="isReporting() || !reportReason().trim()" (click)="submitReport()" type="button">
+              {{ isReporting() ? 'Sending...' : 'Report' }}
+            </button>
+          </div>
+        </article>
+      </div>
+    }
+  </section>
+</app-site-shell>

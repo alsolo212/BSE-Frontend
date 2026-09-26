@@ -1,0 +1,132 @@
+<app-site-shell>
+  <section class="shipment-confirmation-page">
+    <article class="shipment-confirmation-card">
+      <button class="back-button" (click)="goBack()" type="button" aria-label="Go back">
+        <img alt="" src="assets/icons/left.svg" />
+      </button>
+
+      <header class="shipment-confirmation-card__header">
+        <h1>Shipment Confirmation</h1>
+        <p>Please fill in the required fields to confirm order.</p>
+      </header>
+
+      @if (errorMessage()) {
+        <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+      }
+
+      @if (isLoading()) {
+        <div class="shipment-confirmation-card__loading"></div>
+      } @else if (order(); as currentOrder) {
+        <article class="cart-product-card">
+          <div class="cart-product-card__info">
+            <div class="cart-product-card__image-wrap">
+              @if (listingImageUrl(); as imageUrl) {
+                <img [alt]="currentOrder.listing.title" [src]="imageUrl" />
+              } @else {
+                <div class="cart-product-card__placeholder">BSE</div>
+              }
+            </div>
+
+            <div class="cart-product-card__copy">
+              <h2>{{ currentOrder.listing.title }}</h2>
+              <p>{{ currentOrder.deliveryCity }} - {{ currentOrder.createdAtUtc | date: 'dd.MM.yyyy' }}</p>
+              <strong>{{ currentOrder.totalAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+            </div>
+          </div>
+
+          <div class="cart-product-card__controls">
+            <div class="cart-quantity">
+              <select class="cart-quantity__select" [disabled]="true">
+                <option [value]="currentOrder.quantity" selected>{{ currentOrder.quantity }}</option>
+              </select>
+              <img alt="" src="assets/icons/down-secondary.svg" />
+            </div>
+          </div>
+        </article>
+
+        <form class="shipment-form" [formGroup]="form">
+          <section class="shipment-section">
+            <h2>Shipping Details</h2>
+            <label class="form-field">
+              <input class="form-input" formControlName="recipientName" placeholder="Name" type="text" />
+              @if (controlHasError('recipientName')) {
+                <p class="field-error">Enter the recipient name.</p>
+              }
+            </label>
+            <label class="form-field">
+              <input class="form-input" formControlName="deliveryAddress" placeholder="Full shipping address" type="text" />
+              @if (controlHasError('deliveryAddress')) {
+                <p class="field-error">Enter the shipping address.</p>
+              }
+            </label>
+          </section>
+
+          <section class="shipment-section">
+            <h2>Card for receiving funds</h2>
+            <label class="form-field">
+              <input class="form-input" formControlName="payoutCardMasked" placeholder="Enter Card Number" type="text" />
+              @if (controlHasError('payoutCardMasked')) {
+                <p class="field-error">Enter the payout card details.</p>
+              }
+            </label>
+          </section>
+
+          <section class="shipment-section">
+            <h2>Contact Information</h2>
+            <label class="form-field">
+              <input class="form-input" formControlName="senderFirstName" placeholder="Name" type="text" />
+              @if (controlHasError('senderFirstName')) {
+                <p class="field-error">Enter the sender name.</p>
+              }
+            </label>
+            <label class="form-field">
+              <input class="form-input" formControlName="senderLastName" placeholder="Surname" type="text" />
+              @if (controlHasError('senderLastName')) {
+                <p class="field-error">Enter the sender surname.</p>
+              }
+            </label>
+            <label class="form-field">
+              <input class="form-input" formControlName="senderPhone" placeholder="Phone" type="tel" />
+              @if (controlHasError('senderPhone')) {
+                <p class="field-error">Enter the sender phone.</p>
+              }
+            </label>
+
+            <label class="checkbox-row" [class.checkbox-row--checked]="form.controls.saveSellerDetails.value">
+              <input formControlName="saveSellerDetails" type="checkbox" />
+              <span class="checkbox-row__box">
+                @if (form.controls.saveSellerDetails.value) {
+                  <img alt="" src="assets/icons/check-mark.svg" />
+                }
+              </span>
+              <span>Save personal data for the next sales</span>
+            </label>
+          </section>
+
+          <div class="shipment-form__actions">
+            <button class="gray-button" (click)="requestRefuse()" type="button">Decline</button>
+            <button class="big-button" (click)="confirmShipment()" [disabled]="isSubmitting()" type="button">
+              {{ isSubmitting() ? 'Saving...' : 'Accept' }}
+            </button>
+          </div>
+        </form>
+      }
+    </article>
+
+    @if (isRefuseDialogOpen()) {
+      <div class="dialog-backdrop" (click)="closeRefuseDialog()">
+        <article class="dialog-card" (click)="$event.stopPropagation()">
+          <button class="dialog-card__close" (click)="closeRefuseDialog()" type="button" aria-label="Close popup">
+            <img alt="" src="assets/icons/close.svg" />
+          </button>
+          <h2>Decline shipment?</h2>
+          <p>The buyer order will be declined and the listing will become active again.</p>
+          <div class="dialog-card__actions">
+            <button class="secondary-button" (click)="closeRefuseDialog()" type="button">Cancel</button>
+            <button class="danger-button" (click)="confirmRefuse()" [disabled]="isSubmitting()" type="button">Decline</button>
+          </div>
+        </article>
+      </div>
+    }
+  </section>
+</app-site-shell>

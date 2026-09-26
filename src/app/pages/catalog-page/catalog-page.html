@@ -1,0 +1,212 @@
+<app-site-shell>
+  <section class="catalog-page">
+    <h1 class="catalog-page__title">Products</h1>
+
+    @if (errorMessage()) {
+      <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+    }
+
+    <section class="catalog-toolbar">
+      <label class="catalog-toolbar__search">
+        <span class="visually-hidden">Search products</span>
+        <input
+          [ngModel]="searchDraft()"
+          (keydown.enter)="$event.preventDefault(); applySearch()"
+          (ngModelChange)="updateSearchDraft($event)"
+          class="catalog-input"
+          placeholder="Search..."
+          type="search" />
+      </label>
+
+      <button class="catalog-icon-button catalog-icon-button--toolbar" (click)="applySearch()" type="button" aria-label="Search">
+        <img alt="" src="assets/icons/search-brand.svg" />
+      </button>
+
+      <div class="catalog-toolbar__dropdown-wrap">
+        <button class="catalog-icon-button catalog-icon-button--toolbar" (click)="toggleSortMenu($event)" type="button" aria-label="Sort">
+          <img alt="" src="assets/icons/sorting-brand.svg" />
+        </button>
+
+        @if (isSortOpen()) {
+          <div class="catalog-dropdown">
+            <div class="catalog-radio-list">
+              @for (option of sortOptions; track option.value) {
+                <label class="catalog-radio">
+                  <input
+                    [checked]="selectedSort() === option.value"
+                    (change)="updateSort(option.value)"
+                    name="catalog-sort"
+                    type="radio" />
+                  <span class="catalog-radio__mark"></span>
+                  <span>{{ option.label }}</span>
+                </label>
+              }
+            </div>
+
+            <div class="catalog-dropdown__actions">
+              <button class="catalog-big-button" (click)="applySort()" type="button">Apply</button>
+              <button class="catalog-gray-button" (click)="resetSort()" type="button">Reset</button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="catalog-toolbar__dropdown-wrap">
+        <button class="catalog-icon-button catalog-icon-button--toolbar" (click)="toggleFilterMenu($event)" type="button" aria-label="Filter">
+          <img alt="" src="assets/icons/filter-brand.svg" />
+        </button>
+
+        @if (isFilterOpen()) {
+          <div class="catalog-dropdown">
+            <div class="catalog-field">
+              <h4>Category</h4>
+              <div class="catalog-select-wrap">
+                <select [ngModel]="selectedCategoryId()" (ngModelChange)="updateCategory($event)" class="catalog-select">
+                  @for (category of categories(); track category.id) {
+                    <option [value]="category.id">{{ category.name }}</option>
+                  }
+                </select>
+                <img alt="" src="assets/icons/down.svg" />
+              </div>
+            </div>
+
+            <div class="catalog-field">
+              <h4>Condition</h4>
+              <div class="catalog-select-wrap">
+                <select [ngModel]="selectedCondition()" (ngModelChange)="updateCondition($event)" class="catalog-select">
+                  @for (option of conditionOptions; track option.value) {
+                    <option [value]="option.value">{{ option.label }}</option>
+                  }
+                </select>
+                <img alt="" src="assets/icons/down.svg" />
+              </div>
+            </div>
+
+            <div class="catalog-field">
+              <h4>Price</h4>
+              <div class="catalog-price-row">
+                <input
+                  [ngModel]="minPrice()"
+                  (ngModelChange)="updateMinPrice($event)"
+                  class="catalog-input"
+                  placeholder="Min"
+                  type="number" />
+                <input
+                  [ngModel]="maxPrice()"
+                  (ngModelChange)="updateMaxPrice($event)"
+                  class="catalog-input"
+                  placeholder="Max"
+                  type="number" />
+              </div>
+            </div>
+
+            <div class="catalog-dropdown__actions">
+              <button class="catalog-big-button" (click)="applyFilters()" type="button">Apply</button>
+              <button class="catalog-gray-button" (click)="resetFilters()" type="button">Reset</button>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="catalog-results-header">
+      <div class="catalog-results-header__copy">
+        <h2>{{ resultsLabel() }}</h2>
+        <p>Every card opens the full details page.</p>
+      </div>
+
+      <div class="catalog-view-toggle">
+        <button
+          class="catalog-icon-button"
+          [class.catalog-icon-button--active]="viewMode() === 'list'"
+          (click)="setViewMode('list')"
+          type="button"
+          aria-label="List view">
+          <img alt="" [src]="viewMode() === 'list' ? 'assets/icons/layout-list-active.svg' : 'assets/icons/layout-list.svg'" />
+        </button>
+        <button
+          class="catalog-icon-button"
+          [class.catalog-icon-button--active]="viewMode() === 'grid'"
+          (click)="setViewMode('grid')"
+          type="button"
+          aria-label="Grid view">
+          <img alt="" [src]="viewMode() === 'grid' ? 'assets/icons/layout-grid-active.svg' : 'assets/icons/layout-grid.svg'" />
+        </button>
+      </div>
+    </section>
+
+    @if (isLoading()) {
+      <section class="catalog-list">
+        @for (_ of [1,2,3]; track $index) {
+          <article class="catalog-card catalog-card--list catalog-card--skeleton"></article>
+        }
+      </section>
+    } @else if (viewMode() === 'list') {
+      <section class="catalog-list">
+        @for (product of products(); track product.id) {
+          <article class="catalog-card catalog-card--list" (click)="openListing(product.id)">
+            <div class="catalog-card__image-wrap">
+              @if (productImageUrl(product); as imageUrl) {
+                <img [alt]="product.title" [src]="imageUrl" />
+              } @else {
+                <div class="catalog-card__placeholder">BSE</div>
+              }
+            </div>
+
+            <div class="catalog-card__content">
+              <div class="catalog-card__top">
+                <div class="catalog-card__copy">
+                  <h4>{{ productTitle(product.title) }}</h4>
+                  <span class="catalog-card__condition">{{ product.condition }}</span>
+                </div>
+
+                <div class="catalog-card__price">
+                  <strong>{{ product.price | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                </div>
+              </div>
+
+              <p>{{ product.city }} &mdash; {{ product.createdAtUtc | date: 'dd.MM.yyyy' }}</p>
+            </div>
+          </article>
+        } @empty {
+          <article class="empty-panel">
+            <img alt="" src="assets/images/empty-sad.png" />
+            <div>
+              <h3>No products found</h3>
+              <p>Try another search phrase or reset one of the filters.</p>
+            </div>
+          </article>
+        }
+      </section>
+    } @else {
+      <section class="catalog-grid">
+        @for (product of products(); track product.id) {
+          <article class="catalog-card catalog-card--grid" (click)="openListing(product.id)">
+            <div class="catalog-card__grid-image">
+              @if (productImageUrl(product); as imageUrl) {
+                <img [alt]="product.title" [src]="imageUrl" />
+              } @else {
+                <div class="catalog-card__placeholder">BSE</div>
+              }
+            </div>
+
+            <div class="catalog-card__grid-body">
+              <h4>{{ productTitle(product.title) }}</h4>
+              <span class="catalog-card__condition catalog-card__condition--compact">{{ product.condition }}</span>
+              <strong>{{ product.price | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+              <p>{{ product.city }} &mdash; {{ product.createdAtUtc | date: 'dd.MM.yyyy' }}</p>
+            </div>
+          </article>
+        } @empty {
+          <article class="empty-panel">
+            <img alt="" src="assets/images/empty-sad.png" />
+            <div>
+              <h3>No products found</h3>
+              <p>Try another search phrase or reset one of the filters.</p>
+            </div>
+          </article>
+        }
+      </section>
+    }
+  </section>
+</app-site-shell>

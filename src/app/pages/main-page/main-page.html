@@ -1,0 +1,82 @@
+<app-site-shell>
+  <section class="main-page">
+    @if (errorMessage()) {
+      <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+    }
+
+    <section class="main-page__section">
+      <h1 class="main-page__title">Categories</h1>
+
+      @if (isLoading()) {
+        <section class="category-grid">
+          @for (_ of [1,2,3,4,5,6,7,8,9]; track $index) {
+            <article class="category-card category-card--skeleton"></article>
+          }
+        </section>
+      } @else {
+        <section class="category-grid">
+          @for (category of categories(); track category.id) {
+            <button class="category-card" (click)="openProducts(category.id)" type="button">
+              <div class="category-card__image-wrap">
+                <img [alt]="category.name" [src]="categoryImageUrl(category)" />
+                <div class="category-card__overlay">
+                  <span>View products</span>
+                </div>
+              </div>
+              <div class="category-card__label">{{ category.name }}</div>
+            </button>
+          }
+        </section>
+      }
+    </section>
+
+    <section class="main-page__section main-page__section--products">
+      <h1 class="main-page__title">Products</h1>
+
+      @if (isLoading()) {
+        <section class="product-list">
+          @for (_ of [1,2,3,4]; track $index) {
+            <article class="product-card product-card--skeleton"></article>
+          }
+        </section>
+      } @else {
+        <section class="product-list">
+          @for (product of featuredProducts(); track product.id) {
+            <article class="product-card" (click)="openListing(product.id)">
+              <div class="product-card__image-wrap">
+                @if (productImageUrl(product); as imageUrl) {
+                  <img [alt]="product.title" [src]="imageUrl" />
+                } @else {
+                  <div class="product-card__placeholder">BSE</div>
+                }
+              </div>
+
+              <div class="product-card__content">
+                <div class="product-card__top">
+                  <div class="product-card__copy">
+                    <h4>{{ productTitle(product.title) }}</h4>
+                    <span class="product-card__condition">{{ product.condition }}</span>
+                  </div>
+
+                  <div class="product-card__price">
+                    <strong>{{ product.price | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                  </div>
+                </div>
+
+                <p>{{ product.city }} &mdash; {{ product.createdAtUtc | date: 'dd.MM.yyyy' }}</p>
+              </div>
+            </article>
+          } @empty {
+            <article class="empty-panel">
+              <img alt="" src="assets/images/empty-marketplace.png" />
+              <div>
+                <h3>No listings yet</h3>
+                <p>As soon as sellers create active listings, they will appear here.</p>
+              </div>
+            </article>
+          }
+        </section>
+      }
+    </section>
+  </section>
+</app-site-shell>

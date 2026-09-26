@@ -1,0 +1,142 @@
+<app-site-shell>
+  <section class="admin-page">
+    <header class="admin-page__header">
+      <h1 class="page-title">All Users</h1>
+    </header>
+
+    @if (errorMessage()) {
+      <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+    }
+
+    <section class="profile-tabs">
+      <button class="profile-tabs__button" (click)="openUsers()" type="button">Search</button>
+      <button class="profile-tabs__button profile-tabs__button--active" type="button">Disputes</button>
+      <button class="profile-tabs__button" (click)="openSupportChats()" type="button">
+        Chats
+        @if (hasUnseenChats()) {
+          <span class="profile-tabs__dot"></span>
+        }
+      </button>
+      <button class="profile-tabs__button" (click)="openReports()" type="button">Reports</button>
+    </section>
+
+    @if (isLoading()) {
+      <div class="admin-page__loading"></div>
+    } @else if (reviews().length > 0) {
+      <div class="profile-toolbar">
+        <label class="admin-toolbar__search">
+          <input
+            [ngModel]="searchTerm()"
+            (ngModelChange)="updateSearch($event)"
+            class="profile-input"
+            placeholder="Search..."
+            type="search" />
+        </label>
+        <div class="profile-toolbar__controls">
+          <button class="profile-icon-button" type="button" aria-label="Search">
+            <img alt="" src="assets/icons/search-brand.svg" />
+          </button>
+          <div class="profile-toolbar__dropdown-wrap">
+            <button class="profile-icon-button" (click)="toggleSortMenu($event)" type="button" aria-label="Sort disputes">
+              <img alt="" src="assets/icons/sorting-brand.svg" />
+            </button>
+
+            @if (isSortMenuOpen()) {
+              <div class="profile-dropdown">
+                <div class="profile-field">
+                  <h4>Sorting</h4>
+                  <div class="profile-radio-list">
+                    <label class="profile-radio">
+                      <input [checked]="selectedSort() === 'newest'" (change)="updateSort('newest')" name="admin-dispute-sort" type="radio" />
+                      <span class="profile-radio__mark"></span>
+                      <span>Newest</span>
+                    </label>
+                    <label class="profile-radio">
+                      <input [checked]="selectedSort() === 'oldest'" (change)="updateSort('oldest')" name="admin-dispute-sort" type="radio" />
+                      <span class="profile-radio__mark"></span>
+                      <span>Oldest</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="profile-dropdown__actions">
+                  <button class="profile-big-button" (click)="applySort()" type="button">Apply</button>
+                  <button class="profile-gray-button" (click)="resetSort()" type="button">Reset</button>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="disputes-list">
+        @for (review of filteredReviews(); track review.id) {
+          <article class="review-card review-card--actionable" (click)="openReview(review)">
+            <div class="review-card__header">
+              <div class="review-stars" aria-label="Review rating">
+                @for (_ of [1,2,3,4,5]; track $index) {
+                  <span class="review-star" [class.review-star--active]="$index < review.rating"></span>
+                }
+              </div>
+              <time>{{ review.createdAtUtc | date: 'MM/yy' }}</time>
+            </div>
+            <h3>{{ review.listingTitle || 'Product Name' }}</h3>
+            <p class="review-card__comment">{{ review.comment }}</p>
+          </article>
+        }
+      </div>
+    } @else {
+      <article class="empty-panel">
+        <img alt="" src="assets/images/empty-sad.png" />
+        <div>
+          <h2>No disputes right now</h2>
+          <p>Newly disputed reviews will appear here for moderation as soon as users submit them.</p>
+        </div>
+      </article>
+    }
+
+    @if (selectedReview(); as review) {
+      <div class="dialog-backdrop" (click)="closeReview()">
+        <article class="dialog-card dialog-card--moderation" (click)="$event.stopPropagation()">
+          <button class="dialog-card__close" (click)="closeReview()" type="button" aria-label="Close popup">
+            <img alt="" src="assets/icons/close.svg" />
+          </button>
+          <h2>Dispute</h2>
+          <p>Review the dispute and decide whether to remove the review. Copy email if blocking is required.</p>
+
+          <article class="review-preview">
+            <div class="dispute-card__stars">
+              @for (_ of [1,2,3,4,5]; track $index) {
+                <span [class.dispute-card__star--active]="$index < review.rating">★</span>
+              }
+            </div>
+            <span class="review-preview__date">{{ review.createdAtUtc | date: 'MM/yy' }}</span>
+            <h3>{{ review.listingTitle || 'Product Name' }}</h3>
+            <p>{{ review.comment }}</p>
+          </article>
+
+          <section class="moderation-section">
+            <h3>Reviewer</h3>
+            <div class="moderation-field">{{ review.authorName }}</div>
+            <div class="moderation-field moderation-field--with-copy">
+              <span>{{ review.authorId }}</span>
+            </div>
+          </section>
+
+          <section class="moderation-section">
+            <h3>Reporter</h3>
+            <div class="moderation-field">{{ review.targetUserName }}</div>
+            <div class="moderation-field moderation-field--with-copy">
+              <span>{{ review.targetUserId }}</span>
+            </div>
+          </section>
+
+          <div class="dialog-card__actions">
+            <button class="secondary-button" [disabled]="isSubmitting()" (click)="hideReview(review.id)" type="button">Decline</button>
+            <button class="danger-button" [disabled]="isSubmitting()" (click)="removeReview(review.id)" type="button">Remove Review</button>
+          </div>
+        </article>
+      </div>
+    }
+  </section>
+</app-site-shell>

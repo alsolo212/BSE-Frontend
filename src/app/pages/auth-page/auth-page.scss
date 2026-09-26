@@ -1,0 +1,140 @@
+.auth-page {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: var(--space-64) var(--space-16);
+  background: var(--color-background);
+}
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-24);
+  width: min(100%, 500px);
+  padding: var(--space-48) var(--space-32) var(--space-32);
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.auth-card__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-12);
+  text-align: center;
+}
+
+.auth-card__header h1,
+.auth-form h2 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.auth-card__header p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  text-align: center;
+}
+
+.auth-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+}
+
+.auth-toggle__button {
+  position: relative;
+  min-width: 74px;
+  padding: var(--space-8) var(--space-12) var(--space-12);
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+}
+
+.auth-toggle__button::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  background: var(--color-text-primary);
+}
+
+.auth-toggle__button:hover,
+.auth-toggle__button--active {
+  color: var(--color-text-primary);
+}
+
+.auth-toggle__button:hover::after {
+  height: 7px;
+}
+
+.auth-toggle__button--active::after,
+.auth-toggle__button--active:hover::after {
+  height: 4px;
+}
+
+.form-banner {
+  width: 100%;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.auth-form h2 {
+  margin-bottom: var(--space-4);
+}
+
+.form-field {
+  display: block;
+  width: 100%;
+}
+
+.form-input {
+  border-radius: 10px;
+}
+
+.field-action {
+  right: var(--space-16);
+}
+
+.submit-button {
+  width: 100%;
+  min-height: 40px;
+  margin-top: var(--space-12);
+  border: none;
+  border-radius: 10px;
+  background: var(--color-text-primary);
+  color: var(--color-surface);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+}
+
+.submit-button:hover:not(:disabled) {
+  background: var(--color-text-secondary);
+}
+
+@media (max-width: 720px) {
+  .auth-page {
+    padding: var(--space-64) var(--space-16);
+  }
+}

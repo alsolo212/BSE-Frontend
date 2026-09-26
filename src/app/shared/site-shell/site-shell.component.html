@@ -1,0 +1,93 @@
+<div class="site-shell">
+  <header class="site-shell__header">
+    <div class="site-shell__header-inner">
+      <a class="site-shell__brand" [routerLink]="homeRoute">BSE</a>
+
+      <nav class="site-shell__nav site-shell__nav--desktop">
+        <a class="site-shell__nav-link" [routerLink]="productsRoute" routerLinkActive="site-shell__nav-link--active">Products</a>
+        <a class="site-shell__nav-link" [routerLink]="cartRoute()" routerLinkActive="site-shell__nav-link--active">Cart</a>
+        <a class="site-shell__nav-link" [routerLink]="profileRoute()" routerLinkActive="site-shell__nav-link--active">Profile</a>
+        @if (isAdmin()) {
+          <a class="site-shell__nav-link" [routerLink]="adminRoute" routerLinkActive="site-shell__nav-link--active">All Users</a>
+        }
+      </nav>
+
+      <nav class="site-shell__nav site-shell__nav--mobile">
+        <a class="site-shell__icon-button" [routerLink]="cartRoute()" aria-label="Cart">
+          <img alt="" src="assets/icons/cart.svg" />
+        </a>
+        <a class="site-shell__icon-button" [routerLink]="profileRoute()" aria-label="Profile">
+          <img alt="" src="assets/icons/profile.svg" />
+        </a>
+        <button class="site-shell__icon-button" (click)="openMobileMenu()" type="button" aria-label="Open menu">
+          <img alt="" src="assets/icons/menu.svg" />
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="site-shell__main">
+    <div class="site-shell__container">
+      <ng-content />
+    </div>
+  </main>
+
+  <footer class="site-shell__footer">
+    <div class="site-shell__footer-main">
+      <div class="site-shell__footer-inner site-shell__footer-grid">
+        <section class="site-shell__footer-block site-shell__footer-block--brand">
+          <a class="site-shell__footer-brand" [routerLink]="homeRoute">BSE</a>
+          <p>Your trusted marketplace for buying and selling products.</p>
+        </section>
+
+        <section class="site-shell__footer-block">
+          <h2>Quick Links</h2>
+          <a [routerLink]="productsRoute">Products</a>
+          <a [routerLink]="cartRoute()">Cart</a>
+          <a [routerLink]="profileRoute()">Profile</a>
+          @if (isAdmin()) {
+            <a [routerLink]="adminRoute">All Users</a>
+          }
+        </section>
+
+        <section class="site-shell__footer-block">
+          <h2>Contact</h2>
+          <span>Email: support@bse.com</span>
+          <span>Telegram: alsolo212</span>
+        </section>
+      </div>
+    </div>
+
+    <div class="site-shell__footer-bottom">
+      <div class="site-shell__footer-inner">
+        <p>&copy; 2026 BSE. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  @if (isMobileMenuOpen()) {
+    <div class="site-shell__mobile-menu">
+      <div class="site-shell__mobile-menu-inner">
+        <div class="site-shell__mobile-menu-header">
+          <button class="site-shell__icon-button" (click)="closeMobileMenu()" type="button" aria-label="Close menu">
+            <img alt="" src="assets/icons/close.svg" />
+          </button>
+        </div>
+
+        <div class="site-shell__mobile-menu-content">
+          <a class="primary-button site-shell__mobile-add" [routerLink]="addProductRoute()" (click)="closeMobileMenu()">+ Add Product</a>
+
+          <nav class="site-shell__mobile-links">
+            <a [routerLink]="homeRoute" (click)="closeMobileMenu()">Home</a>
+            <a [routerLink]="productsRoute" (click)="closeMobileMenu()">Products</a>
+            <a [routerLink]="cartRoute()" (click)="closeMobileMenu()">Cart</a>
+            <a [routerLink]="profileRoute()" (click)="closeMobileMenu()">Profile</a>
+            @if (isAdmin()) {
+              <a [routerLink]="adminRoute" (click)="closeMobileMenu()">All Users</a>
+            }
+          </nav>
+        </div>
+      </div>
+    </div>
+  }
+</div>

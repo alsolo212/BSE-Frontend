@@ -1,0 +1,111 @@
+<app-site-shell>
+  <section class="cart-page">
+    <header class="cart-page__header">
+      <h1 class="cart-page__title">Cart</h1>
+
+      @if (!isLoading() && cartItems().length > 0) {
+        <div class="cart-page__summary">
+          <div class="cart-page__summary-copy">
+            <span>{{ selectedCount() }} item{{ selectedCount() === 1 ? '' : 's' }}</span>
+            <strong>Price: {{ computedTotalAmount() | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+          </div>
+
+          <button
+            class="cart-page__buy-button"
+            (click)="proceedToCheckout()"
+            [disabled]="selectedCount() === 0 || isUpdating()"
+            type="button">
+            Buy
+          </button>
+        </div>
+      }
+    </header>
+
+    @if (errorMessage()) {
+      <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+    }
+
+    @if (isLoading()) {
+      <section class="cart-list">
+        @for (_ of [1, 2, 3]; track $index) {
+          <article class="cart-row cart-row--skeleton"></article>
+        }
+      </section>
+    } @else if (cartItems().length > 0) {
+      <section class="cart-list">
+        @for (item of cartItems(); track item.id) {
+          <article class="cart-row">
+            <button
+              class="cart-checkbox"
+              [class.cart-checkbox--checked]="item.isSelected"
+              (click)="toggleSelection(item)"
+              [disabled]="isUpdating()"
+              type="button"
+              aria-label="Select item">
+              @if (item.isSelected) {
+                <img alt="" src="assets/icons/check-mark.svg" />
+              }
+            </button>
+
+            <div class="cart-card">
+              <button class="cart-card__info" (click)="openListing(item)" type="button">
+                <div class="cart-card__image-wrap">
+                  @if (itemImageUrl(item); as imageUrl) {
+                    <img [alt]="item.listing.title" [src]="imageUrl" />
+                  } @else {
+                    <div class="cart-card__placeholder">BSE</div>
+                  }
+                </div>
+
+                <div class="cart-card__copy">
+                  <h2>{{ item.listing.title }}</h2>
+                  <p>{{ item.listing.city }} &mdash; {{ item.createdAtUtc | date: 'dd.MM.yyyy' }}</p>
+                  <strong>{{ item.listing.price | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                </div>
+              </button>
+
+              <div class="cart-card__controls">
+                <button
+                  class="cart-card__remove"
+                  (click)="removeItem(item)"
+                  (mouseenter)="setHoveredRemoveItem(item.id)"
+                  (mouseleave)="setHoveredRemoveItem(null)"
+                  [disabled]="isUpdating()"
+                  type="button"
+                  aria-label="Remove item">
+                  <img alt="" [src]="removeIconUrl(item.id)" />
+                </button>
+
+                <div class="cart-quantity">
+                  <select
+                    class="cart-quantity__select"
+                    [ngModel]="item.quantity"
+                    (ngModelChange)="changeQuantity(item, $event)">
+                    @for (quantity of availableQuantities(item); track quantity) {
+                      <option [value]="quantity">{{ quantity }}</option>
+                    }
+                  </select>
+                  <img alt="" src="assets/icons/down-secondary.svg" />
+                </div>
+              </div>
+            </div>
+          </article>
+        }
+      </section>
+    } @else {
+      <article class="cart-empty">
+        <div class="cart-empty__inner">
+          <h2>The cart is empty</h2>
+          <p>Add products to your cart to place your order.</p>
+
+          <img alt="" src="assets/images/cart-empty.png" />
+
+          <div class="cart-empty__actions">
+            <button class="cart-empty__button cart-empty__button--big" (click)="goHome()" type="button">Go to Home</button>
+            <button class="cart-page__buy-button cart-empty__button" (click)="browseProducts()" type="button">Browse Products</button>
+          </div>
+        </div>
+      </article>
+    }
+  </section>
+</app-site-shell>

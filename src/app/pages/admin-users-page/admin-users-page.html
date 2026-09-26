@@ -1,0 +1,141 @@
+<app-site-shell>
+  <section class="admin-page">
+    <header class="admin-page__header">
+      <h1 class="page-title">All Users</h1>
+    </header>
+
+    @if (errorMessage()) {
+      <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+    }
+
+    <section class="profile-tabs">
+      <button class="profile-tabs__button profile-tabs__button--active" type="button">Search</button>
+      <button class="profile-tabs__button" (click)="openDisputes()" type="button">
+        Disputes
+        @if (hasUnseenDisputes()) {
+          <span class="profile-tabs__dot"></span>
+        }
+      </button>
+      <button class="profile-tabs__button" (click)="openSupportChats()" type="button">
+        Chats
+        @if (hasUnseenChats()) {
+          <span class="profile-tabs__dot"></span>
+        }
+      </button>
+      <button class="profile-tabs__button" (click)="openReports()" type="button">
+        Reports
+        @if (hasUnseenReports()) {
+          <span class="profile-tabs__dot"></span>
+        }
+      </button>
+    </section>
+
+    <section class="profile-toolbar">
+      <label class="admin-toolbar__search">
+        <span class="visually-hidden">Search users</span>
+        <input
+          [ngModel]="searchTerm()"
+          (ngModelChange)="updateSearch($event)"
+          class="profile-input"
+          placeholder="Search..."
+          type="search" />
+      </label>
+
+      <div class="profile-toolbar__controls">
+        <button class="profile-icon-button" type="button" aria-label="Search">
+          <img alt="" src="assets/icons/search-brand.svg" />
+        </button>
+        <div class="profile-toolbar__dropdown-wrap">
+          <button class="profile-icon-button" (click)="toggleSortMenu($event)" type="button" aria-label="Sort users">
+            <img alt="" src="assets/icons/sorting-brand.svg" />
+          </button>
+
+          @if (isSortMenuOpen()) {
+            <div class="profile-dropdown">
+              <div class="profile-field">
+                <h4>Role</h4>
+                <div class="profile-radio-list">
+                  <label class="profile-radio">
+                    <input [checked]="roleFilter() === 'admin'" (change)="setRoleFilter('admin')" name="admin-role-filter" type="radio" />
+                    <span class="profile-radio__mark"></span>
+                    <span>Admin</span>
+                  </label>
+                  <label class="profile-radio">
+                    <input [checked]="roleFilter() === 'user'" (change)="setRoleFilter('user')" name="admin-role-filter" type="radio" />
+                    <span class="profile-radio__mark"></span>
+                    <span>User</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="profile-field">
+                <h4>Sorting</h4>
+                <div class="profile-radio-list">
+                  <label class="profile-radio">
+                    <input [checked]="selectedSort() === 'newest'" (change)="updateSort('newest')" name="admin-user-sort" type="radio" />
+                    <span class="profile-radio__mark"></span>
+                    <span>Newest</span>
+                  </label>
+                  <label class="profile-radio">
+                    <input [checked]="selectedSort() === 'oldest'" (change)="updateSort('oldest')" name="admin-user-sort" type="radio" />
+                    <span class="profile-radio__mark"></span>
+                    <span>Oldest</span>
+                  </label>
+                  <label class="profile-radio">
+                    <input [checked]="selectedSort() === 'worst-reviews'" (change)="updateSort('worst-reviews')" name="admin-user-sort" type="radio" />
+                    <span class="profile-radio__mark"></span>
+                    <span>Worst reviews</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="profile-dropdown__actions">
+                <button class="profile-big-button" (click)="applySort()" type="button">Apply</button>
+                <button class="profile-gray-button" (click)="resetSort()" type="button">Reset</button>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    @if (isLoading()) {
+      <div class="admin-page__loading"></div>
+    } @else if (filteredUsers().length > 0) {
+      <div class="admin-users-list">
+        @for (user of filteredUsers(); track user.id) {
+          <article class="admin-user-card" (click)="openUser(user.id)">
+            <div class="admin-user-card__identity">
+              @if (avatarUrl(user); as avatarUrl) {
+                <img class="admin-user-card__avatar" [alt]="user.userName" [src]="avatarUrl" />
+              } @else {
+                <div class="admin-user-card__avatar admin-user-card__avatar--fallback" aria-hidden="true">
+                  {{ userInitial(user) }}
+                </div>
+              }
+              <div>
+                <h2>{{ user.userName }}</h2>
+                <p>{{ user.email }}</p>
+              </div>
+            </div>
+
+            <div class="admin-user-card__actions">
+              <button class="warning-button" (click)="openEditUser(user.id, $event)" type="button">Edit</button>
+              <button class="danger-button" (click)="toggleBlock(user, $event)" type="button">
+                {{ user.isBlocked ? 'Unblock' : 'Block' }}
+              </button>
+            </div>
+          </article>
+        }
+      </div>
+    } @else {
+      <article class="empty-panel">
+        <img alt="" src="assets/images/empty-marketplace.png" />
+        <div>
+          <h2>No users found</h2>
+          <p>Try a different search term or role filter to see matching marketplace accounts.</p>
+        </div>
+      </article>
+    }
+  </section>
+</app-site-shell>

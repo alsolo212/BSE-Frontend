@@ -1,0 +1,249 @@
+<app-site-shell>
+  <section class="seller-profile-page">
+    <h1 class="page-title">Profile</h1>
+
+    @if (errorMessage()) {
+      <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+    }
+
+    @if (isLoading()) {
+      <article class="profile-card profile-card--loading"></article>
+    } @else if (seller(); as currentSeller) {
+      <article class="profile-card">
+        <div class="profile-card__identity">
+          @if (sellerAvatarUrl(); as avatarUrl) {
+            <img class="profile-card__avatar" [alt]="currentSeller.userName" [src]="avatarUrl" />
+          } @else {
+            <div class="profile-card__avatar profile-card__avatar--fallback">{{ sellerInitial() }}</div>
+          }
+
+          <div class="profile-card__copy">
+            <h2>{{ currentSeller.userName }}</h2>
+            <p>
+              Joined {{ currentSeller.createdAtUtc | date: 'MMM yyyy' }} -
+              {{ currentSeller.activeListingsCount }} active listing{{ currentSeller.activeListingsCount === 1 ? '' : 's' }}
+            </p>
+          </div>
+        </div>
+      </article>
+
+      <section class="profile-tabs">
+        <button
+          class="profile-tabs__button"
+          [class.profile-tabs__button--active]="activeTab() === 'products'"
+          (click)="setActiveTab('products')"
+          type="button">
+          Products
+        </button>
+        <button
+          class="profile-tabs__button"
+          [class.profile-tabs__button--active]="activeTab() === 'reviews'"
+          (click)="setActiveTab('reviews')"
+          type="button">
+          Reviews
+        </button>
+      </section>
+
+      @if (activeTab() === 'products') {
+        <section class="profile-section">
+          <h2 class="profile-section__title">Products</h2>
+
+          <div class="profile-toolbar profile-toolbar--seller">
+            <div class="profile-toolbar__controls">
+              <label class="profile-toolbar__search">
+                <span class="visually-hidden">Search seller products</span>
+                <input
+                  [ngModel]="searchTerm()"
+                  (keydown.enter)="$event.preventDefault(); applySearch()"
+                  (ngModelChange)="updateSearch($event)"
+                  class="profile-input"
+                  placeholder="Search..."
+                  type="search" />
+              </label>
+
+              <button class="profile-icon-button" (click)="applySearch()" type="button" aria-label="Search">
+                <img alt="" src="assets/icons/search-brand.svg" />
+              </button>
+
+              <div class="profile-toolbar__dropdown-wrap">
+                <button class="profile-icon-button" (click)="toggleSortMenu($event)" type="button" aria-label="Sort products">
+                  <img alt="" src="assets/icons/sorting-brand.svg" />
+                </button>
+
+                @if (isSortMenuOpen()) {
+                  <div class="profile-dropdown">
+                    <div class="profile-radio-list">
+                      @for (option of sortOptions; track option.value) {
+                        <label class="profile-radio">
+                          <input
+                            [checked]="selectedSort() === option.value"
+                            (change)="updateSort(option.value)"
+                            name="seller-sort"
+                            type="radio" />
+                          <span class="profile-radio__mark"></span>
+                          <span>{{ option.label }}</span>
+                        </label>
+                      }
+                    </div>
+
+                    <div class="profile-dropdown__actions">
+                      <button class="profile-big-button" (click)="applySort()" type="button">Apply</button>
+                      <button class="profile-gray-button" (click)="resetSort()" type="button">Reset</button>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <div class="profile-toolbar__dropdown-wrap">
+                <button class="profile-icon-button" (click)="toggleFilterMenu($event)" type="button" aria-label="Filter products">
+                  <img alt="" src="assets/icons/filter-brand.svg" />
+                </button>
+
+                @if (isFilterMenuOpen()) {
+                  <div class="profile-dropdown">
+                    <div class="profile-field">
+                      <h4>Category</h4>
+                      <div class="profile-select-wrap">
+                        <select
+                          [ngModel]="selectedCategory()"
+                          (ngModelChange)="updateCategory($event)"
+                          class="profile-select">
+                          @for (category of categoryOptions(); track category.value) {
+                            <option [value]="category.value">{{ category.label }}</option>
+                          }
+                        </select>
+                        <img alt="" src="assets/icons/down.svg" />
+                      </div>
+                    </div>
+
+                    <div class="profile-field">
+                      <h4>Condition</h4>
+                      <div class="profile-select-wrap">
+                        <select
+                          [ngModel]="selectedCondition()"
+                          (ngModelChange)="updateCondition($event)"
+                          class="profile-select">
+                          @for (option of conditionOptions; track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                          }
+                        </select>
+                        <img alt="" src="assets/icons/down.svg" />
+                      </div>
+                    </div>
+
+                    <div class="profile-field">
+                      <h4>Price</h4>
+                      <div class="profile-price-row">
+                        <input
+                          [ngModel]="minPrice()"
+                          (ngModelChange)="updateMinPrice($event)"
+                          class="profile-input"
+                          placeholder="Min"
+                          type="number" />
+                        <input
+                          [ngModel]="maxPrice()"
+                          (ngModelChange)="updateMaxPrice($event)"
+                          class="profile-input"
+                          placeholder="Max"
+                          type="number" />
+                      </div>
+                    </div>
+
+                    <div class="profile-dropdown__actions">
+                      <button class="profile-big-button" (click)="applyFilters()" type="button">Apply</button>
+                      <button class="profile-gray-button" (click)="resetFilters()" type="button">Reset</button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          @if (filteredListings().length > 0) {
+            <div class="product-list">
+              @for (listing of filteredListings(); track listing.id) {
+                <article class="product-row" (click)="openListing(listing.id)">
+                  <div class="product-row__media">
+                    @if (listingImageUrl(listing); as imageUrl) {
+                      <img [alt]="listing.title" [src]="imageUrl" />
+                    } @else {
+                      <div class="product-row__placeholder">BSE</div>
+                    }
+                  </div>
+
+                  <div class="product-row__content">
+                    <div class="product-row__main">
+                      <h3>{{ listing.title }}</h3>
+                      <span class="profile-condition-badge">{{ formatCondition(listing.condition) }}</span>
+                      <p>{{ listing.city }} - {{ listing.createdAtUtc | date: 'dd.MM' }}</p>
+                    </div>
+
+                    <div class="product-row__meta">
+                      <strong>{{ listing.price | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          } @else {
+            <article class="empty-state">
+              <div>
+                <h3>Add a new product</h3>
+                <p>List your products for sale</p>
+              </div>
+              <img alt="" src="assets/images/empty-profile-products.png" />
+            </article>
+          }
+        </section>
+      } @else {
+        <section class="profile-section profile-section--reviews">
+          <h2 class="profile-section__title">Reviews</h2>
+
+          @if (reviews().length > 0) {
+            <div class="reviews-layout">
+              <article class="reviews-summary">
+                <div class="reviews-summary__main">
+                  <strong>{{ reviewAverageLabel() }}</strong>
+                  <div class="review-stars" aria-label="Average rating">
+                    @for (star of reviewStars(); track star) {
+                      <span class="review-star" [class.review-star--active]="star <= roundedReviewAverage()"></span>
+                    }
+                  </div>
+                  <p>Number of reviews: {{ reviews().length }}</p>
+                </div>
+              </article>
+
+              <div class="review-list">
+                @for (review of reviews(); track review.id) {
+                  <article class="review-card">
+                    <div class="review-card__header">
+                      <div class="review-stars" aria-label="Review rating">
+                        @for (star of reviewStars(); track star) {
+                          <span class="review-star" [class.review-star--active]="star <= review.rating"></span>
+                        }
+                      </div>
+                      <time>{{ review.createdAtUtc | date: 'MM/yy' }}</time>
+                    </div>
+                    <h3>{{ review.listingTitle || 'Product Name' }}</h3>
+                    <p class="review-card__comment">{{ review.comment }}</p>
+                    @if (review.disputeReason) {
+                      <span class="review-card__dispute">Dispute reason: {{ review.disputeReason }}</span>
+                    }
+                  </article>
+                }
+              </div>
+            </div>
+          } @else {
+            <article class="empty-state">
+              <div>
+                <h3>There are no reviews</h3>
+                <p>Reviews will be visible when someone leaves a rating.</p>
+              </div>
+              <img alt="" src="assets/images/empty-profile-reviews.png" />
+            </article>
+          }
+        </section>
+      }
+    }
+  </section>
+</app-site-shell>

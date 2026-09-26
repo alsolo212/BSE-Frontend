@@ -1,0 +1,67 @@
+.error-page {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: var(--space-64) var(--space-16);
+  background: var(--color-background);
+}
+
+.error-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-24);
+  width: min(100%, 500px);
+  padding: var(--space-48) var(--space-32) var(--space-32);
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+.error-card__copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.error-card h1 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+}
+
+.error-card p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.error-card img {
+  width: min(100%, 320px);
+  height: 260px;
+  object-fit: contain;
+}
+
+.brand-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 40px;
+  padding: var(--space-8) var(--space-16);
+  border: none;
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: var(--color-surface);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+}
+
+.brand-button:hover {
+  background: var(--color-primary-hover);
+}

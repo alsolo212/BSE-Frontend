@@ -1,0 +1,119 @@
+<app-site-shell>
+  <section class="auth-page">
+    <article class="auth-card">
+      <header class="auth-card__header">
+        <h1>Welcome User!</h1>
+        <p>You are not logged in. Choose an option</p>
+      </header>
+
+      <div class="auth-toggle" role="tablist" aria-label="Authentication form">
+        <button
+          class="auth-toggle__button"
+          [class.auth-toggle__button--active]="mode() === 'login'"
+          (click)="setMode('login')"
+          type="button">
+          Login
+        </button>
+        <button
+          class="auth-toggle__button"
+          [class.auth-toggle__button--active]="mode() === 'register'"
+          (click)="setMode('register')"
+          type="button">
+          Register
+        </button>
+      </div>
+
+      @if (errorMessage()) {
+        <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+      }
+
+      @if (mode() === 'login') {
+        <form class="auth-form" [formGroup]="loginForm" (ngSubmit)="submit()">
+          <h2>Login</h2>
+
+          <label class="form-field">
+            <input class="form-input" formControlName="email" placeholder="Email" type="email" />
+          </label>
+          @if (controlHasError(loginForm, 'email')) {
+            <p class="field-error">Enter a valid email address.</p>
+          }
+
+          <label class="form-field form-field--with-action">
+            <input
+              class="form-input"
+              formControlName="password"
+              placeholder="Password"
+              [type]="loginPasswordVisible() ? 'text' : 'password'" />
+            <button class="field-action" (click)="togglePasswordVisibility('login')" type="button" aria-label="Toggle password visibility">
+              <img alt="" [src]="loginPasswordVisible() ? 'assets/icons/eye-off.svg' : 'assets/icons/eye.svg'" />
+            </button>
+          </label>
+          @if (controlHasError(loginForm, 'password')) {
+            <p class="field-error">Password is required.</p>
+          }
+
+          <button class="submit-button" [disabled]="isSubmitting()" type="submit">
+            {{ isSubmitting() ? 'Logging in...' : 'Login' }}
+          </button>
+        </form>
+      } @else {
+        <form class="auth-form" [formGroup]="registerForm" (ngSubmit)="submit()">
+          <h2>Register</h2>
+
+          <label class="form-field">
+            <input class="form-input" formControlName="userName" placeholder="Name" type="text" />
+          </label>
+          @if (controlHasError(registerForm, 'userName')) {
+            <p class="field-error">Name is required.</p>
+          }
+
+          <label class="form-field">
+            <input class="form-input" formControlName="email" placeholder="Email" type="email" />
+          </label>
+          @if (controlHasError(registerForm, 'email')) {
+            <p class="field-error">Enter a valid email address.</p>
+          }
+
+          <label class="form-field">
+            <input class="form-input" formControlName="phone" placeholder="Phone (optional)" type="tel" />
+          </label>
+          @if (controlHasError(registerForm, 'phone', 'pattern')) {
+            <p class="field-error">Phone should contain numbers only.</p>
+          }
+
+          <label class="form-field form-field--with-action">
+            <input
+              class="form-input"
+              formControlName="password"
+              placeholder="Password"
+              [type]="registerPasswordVisible() ? 'text' : 'password'" />
+            <button class="field-action" (click)="togglePasswordVisibility('register')" type="button" aria-label="Toggle password visibility">
+              <img alt="" [src]="registerPasswordVisible() ? 'assets/icons/eye-off.svg' : 'assets/icons/eye.svg'" />
+            </button>
+          </label>
+          @if (controlHasError(registerForm, 'password')) {
+            <p class="field-error">Password must contain at least 6 characters.</p>
+          }
+
+          <label class="form-field form-field--with-action">
+            <input
+              class="form-input"
+              formControlName="confirmPassword"
+              placeholder="Confirm password"
+              [type]="registerConfirmPasswordVisible() ? 'text' : 'password'" />
+            <button class="field-action" (click)="togglePasswordVisibility('confirm')" type="button" aria-label="Toggle confirmation visibility">
+              <img alt="" [src]="registerConfirmPasswordVisible() ? 'assets/icons/eye-off.svg' : 'assets/icons/eye.svg'" />
+            </button>
+          </label>
+          @if (registerFormHasError('passwordMismatch')) {
+            <p class="field-error">Passwords do not match.</p>
+          }
+
+          <button class="submit-button" [disabled]="isSubmitting()" type="submit">
+            {{ isSubmitting() ? 'Registering...' : 'Register' }}
+          </button>
+        </form>
+      }
+    </article>
+  </section>
+</app-site-shell>

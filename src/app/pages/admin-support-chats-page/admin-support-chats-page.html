@@ -1,0 +1,190 @@
+<app-site-shell>
+  <section class="admin-page">
+    <header class="admin-page__header">
+      <h1 class="page-title">All Users</h1>
+    </header>
+
+    @if (errorMessage()) {
+      <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+    }
+
+    <section class="profile-tabs">
+      <button class="profile-tabs__button" (click)="openUsers()" type="button">Search</button>
+      <button class="profile-tabs__button" (click)="openDisputes()" type="button">
+        Disputes
+        @if (hasUnseenDisputes()) {
+          <span class="profile-tabs__dot"></span>
+        }
+      </button>
+      <button class="profile-tabs__button profile-tabs__button--active" type="button">
+        Chats
+        @if (hasUnseenChats()) {
+          <span class="profile-tabs__dot"></span>
+        }
+      </button>
+      <button class="profile-tabs__button" (click)="openReports()" type="button">Reports</button>
+    </section>
+
+    @if (isLoading()) {
+      <div class="admin-page__loading"></div>
+    } @else if (chats().length > 0) {
+      <div class="chat-layout">
+        <aside class="chat-sidebar">
+          <div class="chat-filters">
+            <button
+              class="chat-filters__button"
+              [class.chat-filters__button--active]="scope() === 'all'"
+              (click)="setScope('all')"
+              type="button">
+              All chats
+            </button>
+            <button
+              class="chat-filters__button"
+              [class.chat-filters__button--active]="scope() === 'mine'"
+              (click)="setScope('mine')"
+              type="button">
+              Your chats
+            </button>
+          </div>
+
+          <div class="chat-list">
+            @for (chat of filteredChats(); track chat.id) {
+              <button
+                class="chat-item"
+                [class.chat-item--active]="activeChatId() === chat.id"
+                (click)="openChat(chat)"
+                type="button">
+                <div class="chat-item__avatar">
+                  @if (chatAvatarUrl(chat); as avatarUrl) {
+                    <img [alt]="chat.counterpartyName" [src]="avatarUrl" />
+                  } @else {
+                    <div class="chat-item__avatar-fallback">{{ chat.counterpartyName.charAt(0).toUpperCase() }}</div>
+                  }
+                </div>
+
+                <div class="chat-item__content">
+                  <div class="chat-item__header">
+                    <strong>{{ chat.counterpartyName }}</strong>
+                    @if (chat.unreadCount > 0) {
+                      <span class="chat-item__badge">{{ chat.unreadCount }}</span>
+                    }
+                  </div>
+                  @if (busyLabel(chat); as busyText) {
+                    <span class="status-chip status-chip--danger">{{ busyText }}</span>
+                  }
+                  <p>{{ chat.lastMessagePreview || 'No messages yet' }}</p>
+                  <span>{{ chat.lastMessageAtUtc | date: 'dd.MM.yyyy HH:mm' }}</span>
+                </div>
+              </button>
+            }
+          </div>
+        </aside>
+
+        <section class="chat-panel">
+          @if (activeChat(); as currentChat) {
+            <header class="chat-panel__header" (click)="openUserProfile()">
+              <h3>{{ currentChat.counterpartyName }}</h3>
+            </header>
+
+            <div class="chat-panel__messages">
+              @if (isMessagesLoading()) {
+                <div class="chat-panel__loading"></div>
+              } @else if (chatMessages().length > 0) {
+                @for (message of chatMessages(); track message.id) {
+                  <article class="message-bubble" [class.message-bubble--own]="!isCounterpartyMessage(message)">
+                    @if (message.content) {
+                      <p>{{ message.content }}</p>
+                    }
+                    @if (attachmentUrl(message); as url) {
+                      @if (isImageMessage(message)) {
+                        <a [href]="url" rel="noreferrer" target="_blank">
+                          <img class="message-bubble__image" [alt]="message.type" [src]="url" />
+                        </a>
+                      } @else {
+                        <a
+                          class="attachment-card"
+                          [class.attachment-card--unknown]="attachmentKind(message) === 'unknown'"
+                          [href]="url"
+                          rel="noreferrer"
+                          target="_blank">
+                          <span class="attachment-card__icon">{{ attachmentIconLabel(message) }}</span>
+                          <span class="attachment-card__body">
+                            <strong>{{ attachmentTypeLabel(message) }}</strong>
+                            <span>Open attachment</span>
+                          </span>
+                        </a>
+                      }
+                    }
+                    <time>{{ message.sentAtUtc | date: 'HH:mm' }}</time>
+                  </article>
+                }
+              } @else {
+                <article class="empty-panel">
+                  <img alt="" src="assets/images/empty-sad.png" />
+                  <div>
+                    <h2>No messages yet</h2>
+                    <p>Reply here to start helping the user.</p>
+                  </div>
+                </article>
+              }
+            </div>
+
+            <div class="chat-composer">
+              <input #chatAttachmentInput class="visually-hidden" (change)="sendAttachment(chatAttachmentInput)" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.txt,.zip" type="file" />
+              <input
+                [ngModel]="messageDraft()"
+                (keydown.enter)="$event.preventDefault(); sendMessage()"
+                (ngModelChange)="updateMessageDraft($event)"
+                class="profile-input chat-composer__input"
+                placeholder="Write..."
+                type="text" />
+              <button class="profile-icon-button" [disabled]="isUploadingAttachment()" (click)="chatAttachmentInput.click()" type="button" aria-label="Attach file">
+                <img alt="" src="assets/icons/chip.svg" />
+              </button>
+              <button class="profile-icon-button" [disabled]="!canSendMessage()" (click)="sendMessage()" type="button" aria-label="Send message">
+                <img alt="" src="assets/icons/send.svg" />
+              </button>
+            </div>
+          } @else {
+            <article class="empty-panel">
+              <img alt="" src="assets/images/empty-sad.png" />
+              <div>
+                <h2>No chat selected</h2>
+                <p>Choose a support conversation from the left column.</p>
+              </div>
+            </article>
+          }
+        </section>
+      </div>
+    } @else {
+      <article class="empty-panel">
+        <img alt="" src="assets/images/empty-sad.png" />
+        <div>
+          <h2>No support chats yet</h2>
+          <p>User support requests will appear here as soon as someone writes to support.</p>
+        </div>
+      </article>
+    }
+
+    @if (pendingClaimChat(); as chatToClaim) {
+      <div class="dialog-backdrop" (click)="closeClaimDialog()">
+        <article class="dialog-card" (click)="$event.stopPropagation()">
+          <button class="dialog-card__close" (click)="closeClaimDialog()" type="button" aria-label="Close popup">
+            <img alt="" src="assets/icons/close.svg" />
+          </button>
+          <h2>Join support chat?</h2>
+          <p>
+            This will assign the conversation with {{ chatToClaim.counterpartyName }} to you.
+            Other admins will see it as taken.
+          </p>
+          <div class="dialog-card__actions">
+            <button class="secondary-button" (click)="closeClaimDialog()" type="button">Cancel</button>
+            <button class="primary-button" [disabled]="isClaimingChat()" (click)="confirmClaimChat()" type="button">
+              {{ isClaimingChat() ? 'Joining...' : 'Join chat' }}
+            </button>
+          </div>
+        </article>
+      </div>
+    }
+  </section>
+</app-site-shell>

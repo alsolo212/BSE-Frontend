@@ -1,0 +1,217 @@
+<app-site-shell>
+  <section class="checkout-page">
+    <article class="buy-card">
+      <button class="back-button" (click)="goBack()" type="button" aria-label="Go back">
+        <img alt="" src="assets/icons/left.svg" />
+      </button>
+
+      <header class="buy-card__header">
+        <h1>Buy</h1>
+        <p>Fill in the fields to buy the product.</p>
+      </header>
+
+      @if (errorMessage()) {
+        <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
+      }
+
+      @if (isLoading()) {
+        <div class="buy-card__loading"></div>
+      } @else {
+        <div class="checkout-list">
+          @if (isCartMode()) {
+            @for (item of selectedCartItems(); track item.id) {
+              <article class="cart-product-card">
+                <div class="cart-product-card__info">
+                  <div class="cart-product-card__image-wrap">
+                    @if (cartItemImageUrl(item); as imageUrl) {
+                      <img [alt]="item.listing.title" [src]="imageUrl" />
+                    } @else {
+                      <div class="cart-product-card__placeholder">BSE</div>
+                    }
+                  </div>
+
+                  <div class="cart-product-card__copy">
+                    <h2>{{ item.listing.title }}</h2>
+                    <p>{{ item.listing.city }} - {{ item.createdAtUtc | date: 'dd.MM.yyyy' }}</p>
+                    <strong>{{ (item.listing.price * item.quantity) | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                  </div>
+                </div>
+
+                <div class="cart-product-card__controls">
+                  <button class="cart-product-card__remove" (click)="removeCheckoutCartItem(item)" type="button" aria-label="Remove item">
+                    <img alt="" src="assets/icons/bin-red.svg" />
+                  </button>
+
+                  <div class="cart-quantity">
+                    <select class="cart-quantity__select" [ngModel]="item.quantity" (ngModelChange)="updateCheckoutCartQuantity(item, $event)">
+                      @for (quantity of availableCartQuantities(item); track quantity) {
+                        <option [value]="quantity">{{ quantity }}</option>
+                      }
+                    </select>
+                    <img alt="" src="assets/icons/down-secondary.svg" />
+                  </div>
+                </div>
+              </article>
+            }
+          } @else if (listing(); as currentListing) {
+            <article class="cart-product-card">
+              <div class="cart-product-card__info">
+                <div class="cart-product-card__image-wrap">
+                  @if (listingImageUrl(); as imageUrl) {
+                    <img [alt]="currentListing.title" [src]="imageUrl" />
+                  } @else {
+                    <div class="cart-product-card__placeholder">BSE</div>
+                  }
+                </div>
+
+                <div class="cart-product-card__copy">
+                  <h2>{{ currentListing.title }}</h2>
+                  <p>{{ currentListing.city }} - {{ currentListing.createdAtUtc | date: 'dd.MM.yyyy' }}</p>
+                  <strong>{{ totalAmount() | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                </div>
+              </div>
+
+              <div class="cart-product-card__controls">
+                <button class="cart-product-card__remove" (click)="removeDirectListingFromCheckout()" type="button" aria-label="Remove item">
+                  <img alt="" src="assets/icons/bin-red.svg" />
+                </button>
+
+                <div class="cart-quantity">
+                  <select class="cart-quantity__select" [ngModel]="form.controls.quantity.getRawValue()" (ngModelChange)="updateDirectQuantity($event)">
+                    @for (quantity of directQuantityOptions(); track quantity) {
+                      <option [value]="quantity">{{ quantity }}</option>
+                    }
+                  </select>
+                  <img alt="" src="assets/icons/down-secondary.svg" />
+                </div>
+              </div>
+            </article>
+          }
+        </div>
+
+        <form class="checkout-form" [formGroup]="form" (ngSubmit)="submit()">
+          <section class="checkout-section">
+            <h2>Payment Method</h2>
+            <p>Select your preferred payment method.</p>
+
+            <label class="form-field form-field--select">
+              <select class="form-select" formControlName="paymentMethod">
+                @for (option of paymentOptions; track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+              <img alt="" src="assets/icons/down.svg" />
+            </label>
+
+            @if (isCardPayment()) {
+              <div class="card-payment-fields">
+                <label class="form-field">
+                  <input class="form-input" formControlName="cardNumber" placeholder="Enter Card Number" type="text" />
+                  @if (controlHasError('cardNumber')) {
+                    <p class="field-error">Enter a valid card number.</p>
+                  }
+                </label>
+
+                <div class="checkout-form__row">
+                  <label class="form-field">
+                    <input class="form-input" formControlName="cardExpiry" placeholder="MM/YY" type="text" />
+                    @if (controlHasError('cardExpiry')) {
+                      <p class="field-error">Enter card expiry in MM/YY.</p>
+                    }
+                  </label>
+
+                  <label class="form-field form-field--with-action">
+                    <input
+                      class="form-input"
+                      formControlName="cardCvc"
+                      placeholder="CVC"
+                      [type]="cardCvcVisible() ? 'text' : 'password'" />
+                    <button class="field-action" (click)="toggleCardCvcVisibility()" type="button" aria-label="Toggle CVC visibility">
+                      <img alt="" [src]="cardCvcVisible() ? 'assets/icons/eye-off.svg' : 'assets/icons/eye.svg'" />
+                    </button>
+                    @if (controlHasError('cardCvc')) {
+                      <p class="field-error">Enter a valid CVC.</p>
+                    }
+                  </label>
+                </div>
+
+                <label class="checkbox-row" [class.checkbox-row--checked]="form.controls.saveCard.value">
+                  <input formControlName="saveCard" type="checkbox" />
+                  <span class="checkbox-row__box">
+                    @if (form.controls.saveCard.value) {
+                      <img alt="" src="assets/icons/check-mark.svg" />
+                    }
+                  </span>
+                  <span>Save Card</span>
+                </label>
+              </div>
+            }
+          </section>
+
+          <section class="checkout-section">
+            <h2>Shipping Details</h2>
+            <p>Enter your full shipping address (city, street, building number, apartment, ZIP/postal code).</p>
+            <label class="form-field">
+              <input class="form-input" formControlName="deliveryAddress" placeholder="Enter your full shipping address" type="text" />
+              @if (controlHasError('deliveryAddress')) {
+                <p class="field-error">Delivery address is required.</p>
+              }
+            </label>
+          </section>
+
+          <section class="checkout-section">
+            <h2>Contact Information</h2>
+            <p>Enter your contact details so we can confirm and update you about your order.</p>
+
+            <label class="form-field">
+              <input class="form-input" formControlName="buyerFirstName" placeholder="Name" type="text" />
+              @if (controlHasError('buyerFirstName')) {
+                <p class="field-error">Enter the buyer first name.</p>
+              }
+            </label>
+
+            <label class="form-field">
+              <input class="form-input" formControlName="buyerLastName" placeholder="Surname" type="text" />
+              @if (controlHasError('buyerLastName')) {
+                <p class="field-error">Enter the buyer surname.</p>
+              }
+            </label>
+
+            <label class="form-field">
+              <input class="form-input" formControlName="buyerEmail" placeholder="Email" type="email" />
+              @if (controlHasError('buyerEmail')) {
+                <p class="field-error">Enter a valid buyer email.</p>
+              }
+            </label>
+
+            <label class="form-field">
+              <input class="form-input" formControlName="buyerPhone" placeholder="Phone" type="tel" />
+              @if (controlHasError('buyerPhone')) {
+                <p class="field-error">Enter the buyer phone number.</p>
+              }
+            </label>
+
+            <label class="checkbox-row" [class.checkbox-row--checked]="form.controls.saveBuyerDetails.value">
+              <input formControlName="saveBuyerDetails" type="checkbox" />
+              <span class="checkbox-row__box">
+                @if (form.controls.saveBuyerDetails.value) {
+                  <img alt="" src="assets/icons/check-mark.svg" />
+                }
+              </span>
+              <span>Save information</span>
+            </label>
+          </section>
+
+          <section class="checkout-total">
+            <strong>Total price:</strong>
+            <strong>{{ totalAmount() | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+          </section>
+
+          <button class="big-button" [disabled]="isSubmitting()" type="submit">
+            {{ isSubmitting() ? 'Creating order...' : 'Buy' }}
+          </button>
+        </form>
+      }
+    </article>
+  </section>
+</app-site-shell>
