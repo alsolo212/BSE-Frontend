@@ -853,7 +853,7 @@ export class ProfilePageComponent {
         },
         error: error => {
           this.errorMessage.set(
-            extractApiError(error, 'Unable to call an operator right now.')
+            extractApiError(error, 'Unable to connect to an operator right now.')
           );
         }
       });
@@ -1127,6 +1127,7 @@ export class ProfilePageComponent {
       return;
     }
 
+    this.messageDraft.set('');
     this.isSendingMessage.set(true);
     this.chatApi
       .sendMessage(chatId, { content })
@@ -1137,7 +1138,6 @@ export class ProfilePageComponent {
             items.some(item => item.id === message.id) ? items : [...items, message]
           );
           this.queueMessagesScrollToBottom();
-          this.messageDraft.set('');
           this.firstUnreadIncomingMessageId.set(null);
           this.chats.update(items => this.sortChatsByLatest([
             ...items.filter(item => item.id !== chatId),
@@ -1150,6 +1150,9 @@ export class ProfilePageComponent {
           this.refreshTabIndicators();
         },
         error: error => {
+          if (!this.messageDraft().trim()) {
+            this.messageDraft.set(content);
+          }
           this.errorMessage.set(extractApiError(error, 'Unable to send the message right now.'));
         }
       });
@@ -1163,6 +1166,7 @@ export class ProfilePageComponent {
     }
 
     const content = this.messageDraft().trim();
+    this.messageDraft.set('');
     this.isUploadingAttachment.set(true);
     this.chatApi
       .uploadAttachment(chatId, file)
@@ -1186,7 +1190,6 @@ export class ProfilePageComponent {
             items.some(item => item.id === message.id) ? items : [...items, message]
           );
           this.queueMessagesScrollToBottom();
-          this.messageDraft.set('');
           this.firstUnreadIncomingMessageId.set(null);
           this.chats.update(items => this.sortChatsByLatest([
             ...items.filter(item => item.id !== chatId),
@@ -1199,6 +1202,9 @@ export class ProfilePageComponent {
           this.refreshTabIndicators();
         },
         error: error => {
+          if (!this.messageDraft().trim()) {
+            this.messageDraft.set(content);
+          }
           this.errorMessage.set(
             extractApiError(error, 'Unable to send the attachment right now.')
           );

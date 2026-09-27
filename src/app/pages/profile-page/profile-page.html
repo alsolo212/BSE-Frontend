@@ -622,7 +622,7 @@
                     @if (currentChat.isSupport) {
                       @if (currentChat.supportStatus === 'BotActive') {
                         <button class="profile-brand-button" (click)="requestSupportAdmin(currentChat, $event)" type="button">
-                          Call operator
+                          Live Agent
                         </button>
                       } @else if (currentChat.supportStatus === 'NeedsAdmin') {
                         <span class="chat-support-status">Waiting for an operator</span>

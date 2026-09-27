@@ -231,6 +231,7 @@ export class AdminSupportChatsPageComponent {
       return;
     }
 
+    this.messageDraft.set('');
     this.isSendingMessage.set(true);
     this.chatApi
       .sendMessage(chatId, { content })
@@ -240,9 +241,11 @@ export class AdminSupportChatsPageComponent {
           this.chatMessages.update(items =>
             items.some(item => item.id === message.id) ? items : [...items, message]
           );
-          this.messageDraft.set('');
         },
         error: error => {
+          if (!this.messageDraft().trim()) {
+            this.messageDraft.set(content);
+          }
           this.errorMessage.set(extractApiError(error, 'Unable to reply right now.'));
         }
       });
@@ -255,6 +258,8 @@ export class AdminSupportChatsPageComponent {
       return;
     }
 
+    const content = this.messageDraft().trim();
+    this.messageDraft.set('');
     this.isUploadingAttachment.set(true);
     this.chatApi
       .uploadAttachment(chatId, file)
@@ -267,9 +272,9 @@ export class AdminSupportChatsPageComponent {
       )
       .subscribe({
         next: uploaded => {
-          this.chatApi
+            this.chatApi
             .sendMessage(chatId, {
-              content: this.messageDraft().trim(),
+              content,
               attachmentUrl: uploaded.attachmentUrl,
               type: uploaded.type
             })
@@ -279,14 +284,19 @@ export class AdminSupportChatsPageComponent {
                 this.chatMessages.update(items =>
                   items.some(item => item.id === message.id) ? items : [...items, message]
                 );
-                this.messageDraft.set('');
               },
               error: error => {
+                if (!this.messageDraft().trim()) {
+                  this.messageDraft.set(content);
+                }
                 this.errorMessage.set(extractApiError(error, 'Unable to send attachment.'));
               }
             });
         },
         error: error => {
+          if (!this.messageDraft().trim()) {
+            this.messageDraft.set(content);
+          }
           this.errorMessage.set(extractApiError(error, 'Unable to upload attachment.'));
         }
       });
