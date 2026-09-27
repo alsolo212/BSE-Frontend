@@ -228,6 +228,11 @@
   color: transparent;
 }
 
+.chat-item__needs-admin {
+  width: 12px;
+  height: 12px;
+}
+
 .status-chip {
   color: var(--color-primary);
   font-size: 14px;
@@ -255,6 +260,13 @@
   font-size: 20px;
   line-height: 28px;
   font-weight: 600;
+}
+
+.chat-panel__join {
+  min-height: 40px;
+  padding: var(--space-8) var(--space-16);
+  border: none;
+  border-radius: 8px;
 }
 
 .chat-panel__messages {

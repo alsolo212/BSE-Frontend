@@ -36,6 +36,10 @@ export class ChatApiService {
     return this.http.post<StartSupportChatResponse>(`${apiConfig.baseUrl}/chats/support`, {});
   }
 
+  requestSupportAdmin(chatId: string): Observable<ChatSummary> {
+    return this.http.post<ChatSummary>(`${apiConfig.baseUrl}/chats/${chatId}/request-admin`, {});
+  }
+
   claimSupportChat(chatId: string): Observable<ChatSummary> {
     return this.http.post<ChatSummary>(`${apiConfig.baseUrl}/chats/${chatId}/claim`, {});
   }

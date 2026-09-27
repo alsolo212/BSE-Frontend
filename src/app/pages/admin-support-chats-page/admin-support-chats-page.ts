@@ -35,6 +35,7 @@ export class AdminSupportChatsPageComponent {
   private readonly seenStorageKey = 'bse.admin.tabs.chats';
   private joinedChatId: string | null = null;
   private realtimeConnected = false;
+  private audioContext: AudioContext | null = null;
 
   private readonly authService = inject(AuthService);
   private readonly chatApi = inject(ChatApiService);
@@ -83,7 +84,12 @@ export class AdminSupportChatsPageComponent {
     );
   });
   protected readonly canSendMessage = computed(() => {
-    return !!this.activeChatId() && this.messageDraft().trim().length > 0 && !this.isSendingMessage();
+    const chat = this.activeChat();
+    const canManageChat = !chat?.isSupport || chat.isAssignedToCurrentAdmin;
+    return !!this.activeChatId() &&
+      canManageChat &&
+      this.messageDraft().trim().length > 0 &&
+      !this.isSendingMessage();
   });
 
   constructor() {
@@ -106,7 +112,15 @@ export class AdminSupportChatsPageComponent {
           return;
         }
 
+        const previousSummary = this.chats().find(item => item.id === summary.id);
+        const needsAdminAlert =
+          summary.supportStatus === 'NeedsAdmin' &&
+          previousSummary?.supportStatus !== 'NeedsAdmin';
+
         this.syncSupportChats();
+        if (needsAdminAlert) {
+          this.playSupportAlert();
+        }
       });
 
     this.destroyRef.onDestroy(() => {
@@ -166,13 +180,17 @@ export class AdminSupportChatsPageComponent {
       return;
     }
 
-    if (!this.isSuperAdmin() && !chat.isAssignedToCurrentAdmin && !chat.assignedAdminId) {
-      this.pendingClaimChat.set(chat);
+    this.activeChatId.set(chat.id);
+    this.loadMessages(chat.id);
+  }
+
+  protected requestJoinChat(chat: ChatSummary, event?: Event): void {
+    event?.stopPropagation();
+    if (chat.assignedAdminId || chat.isAssignedToCurrentAdmin) {
       return;
     }
 
-    this.activeChatId.set(chat.id);
-    this.loadMessages(chat.id);
+    this.pendingClaimChat.set(chat);
   }
 
   protected closeClaimDialog(): void {
@@ -348,6 +366,10 @@ export class AdminSupportChatsPageComponent {
   }
 
   protected busyLabel(chat: ChatSummary): string | null {
+    if (chat.supportStatus === 'NeedsAdmin') {
+      return 'Needs administrator';
+    }
+
     if (!chat.isBusy) {
       return null;
     }
@@ -460,7 +482,7 @@ export class AdminSupportChatsPageComponent {
 
   private buildChatSignatures(items: ChatSummary[]): string[] {
     return items.map(item =>
-      [item.id, item.lastMessageAtUtc, item.unreadCount, item.assignedAdminId ?? 'unassigned'].join('|')
+      [item.id, item.lastMessageAtUtc, item.unreadCount, item.supportStatus, item.assignedAdminId ?? 'unassigned'].join('|')
     );
   }
 
@@ -499,6 +521,31 @@ export class AdminSupportChatsPageComponent {
       this.chats().some(chat => chat.unreadCount > 0) ||
       this.hasUnseen(this.buildChatSignatures(this.chats()))
     );
+  }
+
+  private playSupportAlert(): void {
+    if (typeof window === 'undefined' || !window.AudioContext) {
+      return;
+    }
+
+    try {
+      this.audioContext ??= new window.AudioContext();
+      const oscillator = this.audioContext.createOscillator();
+      const gainNode = this.audioContext.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = 1046;
+      gainNode.gain.value = 0.0001;
+      oscillator.connect(gainNode);
+      gainNode.connect(this.audioContext.destination);
+
+      const now = this.audioContext.currentTime;
+      gainNode.gain.exponentialRampToValueAtTime(0.08, now + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+      oscillator.start(now);
+      oscillator.stop(now + 0.35);
+    } catch {
+      // Browser notification audio is best-effort.
+    }
   }
 
   private attachmentExtension(message: ChatMessage): string | null {

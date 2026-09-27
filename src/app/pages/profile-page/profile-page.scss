@@ -169,6 +169,13 @@
   background: var(--color-primary-hover);
 }
 
+.chat-support-status {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: right;
+}
+
 .profile-tabs {
   display: flex;
   align-items: center;

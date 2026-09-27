@@ -68,9 +68,12 @@
                     @if (chat.unreadCount > 0) {
                       <span class="chat-item__badge">{{ chat.unreadCount }}</span>
                     }
+                    @if (chat.supportStatus === 'NeedsAdmin') {
+                      <img class="chat-item__needs-admin" alt="Needs administrator" src="assets/icons/point.svg" />
+                    }
                   </div>
                   @if (busyLabel(chat); as busyText) {
-                    <span class="status-chip status-chip--danger">{{ busyText }}</span>
+                    <span class="status-chip" [class.status-chip--danger]="chat.supportStatus === 'AdminActive'">{{ busyText }}</span>
                   }
                   <p>{{ chat.lastMessagePreview || 'No messages yet' }}</p>
                   <span>{{ chat.lastMessageAtUtc | date: 'dd.MM.yyyy HH:mm' }}</span>
@@ -84,6 +87,11 @@
           @if (activeChat(); as currentChat) {
             <header class="chat-panel__header" (click)="openUserProfile()">
               <h3>{{ currentChat.counterpartyName }}</h3>
+              @if (!currentChat.assignedAdminId && !currentChat.isAssignedToCurrentAdmin) {
+                <button class="primary-button chat-panel__join" (click)="requestJoinChat(currentChat, $event)" type="button">
+                  Join chat
+                </button>
+              }
             </header>
 
             <div class="chat-panel__messages">

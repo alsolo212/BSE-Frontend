@@ -1,4 +1,5 @@
 export type MessageType = 'Text' | 'Image' | 'File';
+export type SupportChatStatus = 'BotActive' | 'NeedsAdmin' | 'AdminActive';
 
 export interface ChatSummary {
   id: string;
@@ -10,6 +11,7 @@ export interface ChatSummary {
   counterpartyAvatarUrl?: string | null;
   isSellerView: boolean;
   isSupport: boolean;
+  supportStatus: SupportChatStatus;
   assignedAdminId?: string | null;
   assignedAdminName?: string | null;
   isBusy: boolean;

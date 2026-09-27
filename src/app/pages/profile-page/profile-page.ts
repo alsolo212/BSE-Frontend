@@ -835,6 +835,30 @@ export class ProfilePageComponent {
       });
   }
 
+  protected requestSupportAdmin(chat: ChatSummary, event: MouseEvent): void {
+    event.stopPropagation();
+    if (!chat.isSupport || chat.supportStatus !== 'BotActive') {
+      return;
+    }
+
+    this.chatApi
+      .requestSupportAdmin(chat.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: updatedChat => {
+          this.chats.update(items => this.sortChatsByLatest([
+            ...items.filter(item => item.id !== updatedChat.id),
+            updatedChat
+          ]));
+        },
+        error: error => {
+          this.errorMessage.set(
+            extractApiError(error, 'Unable to call an operator right now.')
+          );
+        }
+      });
+  }
+
   protected openListing(listingId: string): void {
     openRouteInNewTab(this.router, ['/listings', listingId]);
   }
