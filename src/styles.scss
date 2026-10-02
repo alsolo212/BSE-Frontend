@@ -71,6 +71,26 @@ img {
   max-width: 100%;
 }
 
+app-auth-page .google-auth__button > div,
+app-auth-page .google-auth__button > iframe,
+app-auth-page .google-auth__button iframe,
+app-auth-page .google-auth__button [role='button'] {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+app-auth-page .google-auth__button [role='button'] {
+  border-radius: 10px !important;
+}
+
+app-auth-page .google-auth__button [role='button']:focus,
+app-auth-page .google-auth__button [role='button']:focus-within,
+app-auth-page .google-auth__button [role='button']:active {
+  outline: none !important;
+  border-color: var(--color-border-light) !important;
+  box-shadow: none !important;
+}
+
 app-root {
   display: block;
   min-height: 100vh;

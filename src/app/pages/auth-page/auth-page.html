@@ -6,6 +6,17 @@
         <p>You are not logged in. Choose an option</p>
       </header>
 
+      <div class="google-auth">
+        <div #googleButton class="google-auth__button" aria-label="Continue with Google"></div>
+        @if (isGoogleSubmitting()) {
+          <p class="google-auth__status">Signing in with Google...</p>
+        }
+      </div>
+
+      <div class="auth-divider" aria-hidden="true">
+        <span>or</span>
+      </div>
+
       <div class="auth-toggle" role="tablist" aria-label="Authentication form">
         <button
           class="auth-toggle__button"
@@ -21,16 +32,6 @@
           type="button">
           Register
         </button>
-      </div>
-
-      <div class="google-auth">
-        <div class="auth-divider" aria-hidden="true">
-          <span>or continue with</span>
-        </div>
-        <div #googleButton class="google-auth__button" aria-label="Continue with Google"></div>
-        @if (isGoogleSubmitting()) {
-          <p class="google-auth__status">Signing in with Google...</p>
-        }
       </div>
 
       @if (errorMessage()) {

@@ -153,7 +153,8 @@ export class AuthPageComponent implements AfterViewInit, OnDestroy {
         size: 'large',
         text: 'continue_with',
         shape: 'rectangular',
-        width: 360
+        width: 400,
+        locale: 'en'
       });
       return;
     }

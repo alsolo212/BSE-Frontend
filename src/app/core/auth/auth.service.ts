@@ -108,6 +108,16 @@ export class AuthService {
 
     this.session.set(nextSession);
     this.writeSession(nextSession);
+    this.preloadProfileImage(response.user.profileImageUrl);
+  }
+
+  private preloadProfileImage(profileImageUrl?: string | null): void {
+    if (!profileImageUrl || typeof window === 'undefined') {
+      return;
+    }
+
+    const image = new Image();
+    image.src = profileImageUrl;
   }
 
   private patchUser(user: AuthUserSummary): void {

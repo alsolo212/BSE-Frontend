@@ -55,9 +55,11 @@
 
 .google-auth__button {
   display: flex;
-  justify-content: center;
+  justify-content: stretch;
   min-height: 44px;
   width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 .google-auth__status {
