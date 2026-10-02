@@ -4,6 +4,7 @@ export interface AuthUserSummary {
   email: string;
   roles: string[];
   profileImageUrl?: string | null;
+  hasPassword?: boolean;
 }
 
 export interface AuthResponse {
@@ -22,6 +23,15 @@ export interface RegisterRequest {
   email: string;
   phone?: string | null;
   password: string;
+  confirmPassword: string;
+}
+
+export interface GoogleLoginRequest {
+  idToken: string;
+}
+
+export interface SetPasswordRequest {
+  newPassword: string;
   confirmPassword: string;
 }
 

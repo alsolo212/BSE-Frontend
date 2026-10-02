@@ -23,6 +23,16 @@
         </button>
       </div>
 
+      <div class="google-auth">
+        <div class="auth-divider" aria-hidden="true">
+          <span>or continue with</span>
+        </div>
+        <div #googleButton class="google-auth__button" aria-label="Continue with Google"></div>
+        @if (isGoogleSubmitting()) {
+          <p class="google-auth__status">Signing in with Google...</p>
+        }
+      </div>
+
       @if (errorMessage()) {
         <div class="form-banner form-banner--error">{{ errorMessage() }}</div>
       }

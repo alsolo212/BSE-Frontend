@@ -5,8 +5,10 @@ import { apiConfig } from '../config/api.config';
 import {
   AuthResponse,
   AuthUserSummary,
+  GoogleLoginRequest,
   LoginRequest,
   RegisterRequest,
+  SetPasswordRequest,
   StoredAuthSession
 } from './auth.models';
 
@@ -47,6 +49,18 @@ export class AuthService {
     return this.http
       .post<AuthResponse>(`${apiConfig.baseUrl}/auth/register`, request)
       .pipe(tap(response => this.persistSession(response)));
+  }
+
+  loginWithGoogle(request: GoogleLoginRequest): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${apiConfig.baseUrl}/auth/google`, request)
+      .pipe(tap(response => this.persistSession(response)));
+  }
+
+  setPassword(request: SetPasswordRequest): Observable<AuthUserSummary> {
+    return this.http
+      .post<AuthUserSummary>(`${apiConfig.baseUrl}/auth/password`, request)
+      .pipe(tap(user => this.patchUser(user)));
   }
 
   loadCurrentUser(): Observable<AuthUserSummary> {

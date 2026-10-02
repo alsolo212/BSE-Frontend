@@ -2,18 +2,32 @@ import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import {
+  AbstractControl,
   NonNullableFormBuilder,
   ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
   Validators
 } from '@angular/forms';
 import { Router } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, forkJoin } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { resolveApiUrl } from '../../core/config/api.config';
 import { extractApiError } from '../../core/http/api-error';
 import { ProfileApiService } from '../../features/profile/profile-api.service';
 import { UserProfile } from '../../features/profile/profile.models';
 import { SiteShellComponent } from '../../shared/site-shell/site-shell.component';
+
+const setPasswordMatchValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+  const newPassword = control.get('newPassword')?.value;
+  const confirmPassword = control.get('confirmPassword')?.value;
+
+  if (!newPassword || !confirmPassword || newPassword === confirmPassword) {
+    return null;
+  }
+
+  return { passwordMismatch: true };
+};
 
 @Component({
   selector: 'app-edit-profile-page',
@@ -36,9 +50,15 @@ export class EditProfilePageComponent {
   protected readonly isDragging = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly profile = signal<UserProfile | null>(null);
+  protected readonly hasPassword = signal(true);
+  protected readonly showSetPasswordDialog = signal(false);
+  protected readonly isSettingPassword = signal(false);
+  protected readonly setPasswordError = signal<string | null>(null);
   protected readonly avatarPreviewUrl = signal<string | null>(null);
   protected readonly selectedAvatarUrl = signal<string | null>(null);
   protected readonly passwordVisible = signal(false);
+  protected readonly newPasswordVisible = signal(false);
+  protected readonly confirmNewPasswordVisible = signal(false);
 
   protected readonly form = this.formBuilder.group({
     userName: ['', [Validators.required, Validators.maxLength(120)]],
@@ -46,6 +66,16 @@ export class EditProfilePageComponent {
     phone: ['', [Validators.pattern(/^[0-9]*$/)]],
     currentPassword: ['', [Validators.required]]
   });
+
+  protected readonly setPasswordForm = this.formBuilder.group(
+    {
+      newPassword: ['', [Validators.required, Validators.minLength(6)]],
+      confirmPassword: ['', [Validators.required]]
+    },
+    {
+      validators: [setPasswordMatchValidator]
+    }
+  );
 
   constructor() {
     this.loadProfile();
@@ -57,6 +87,51 @@ export class EditProfilePageComponent {
 
   protected togglePasswordVisibility(): void {
     this.passwordVisible.update(value => !value);
+  }
+
+  protected toggleNewPasswordVisibility(target: 'new' | 'confirm'): void {
+    if (target === 'new') {
+      this.newPasswordVisible.update(value => !value);
+      return;
+    }
+
+    this.confirmNewPasswordVisible.update(value => !value);
+  }
+
+  protected closeSetPasswordDialog(): void {
+    this.showSetPasswordDialog.set(false);
+    this.setPasswordError.set(null);
+    this.setPasswordForm.reset({
+      newPassword: '',
+      confirmPassword: ''
+    });
+  }
+
+  protected submitSetPassword(): void {
+    if (this.setPasswordForm.invalid) {
+      this.setPasswordForm.markAllAsTouched();
+      return;
+    }
+
+    this.isSettingPassword.set(true);
+    this.setPasswordError.set(null);
+
+    const rawValue = this.setPasswordForm.getRawValue();
+    this.authService
+      .setPassword(rawValue)
+      .pipe(finalize(() => this.isSettingPassword.set(false)))
+      .subscribe({
+        next: user => {
+          this.hasPassword.set(user.hasPassword !== false);
+          this.configureCurrentPasswordField(true);
+          this.closeSetPasswordDialog();
+        },
+        error: error => {
+          this.setPasswordError.set(
+            extractApiError(error, 'Unable to set a password right now.')
+          );
+        }
+      });
   }
 
   protected openFilePicker(input: HTMLInputElement): void {
@@ -141,14 +216,20 @@ export class EditProfilePageComponent {
   }
 
   private loadProfile(): void {
-    this.profileApi
-      .getMyProfile()
+    forkJoin({
+      profile: this.profileApi.getMyProfile(),
+      currentUser: this.authService.loadCurrentUser()
+    })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isLoading.set(false))
       )
       .subscribe({
-        next: profile => {
+        next: ({ profile, currentUser }) => {
+          const userHasPassword = currentUser.hasPassword !== false;
+          this.hasPassword.set(userHasPassword);
+          this.configureCurrentPasswordField(userHasPassword);
+          this.showSetPasswordDialog.set(!userHasPassword);
           this.profile.set(profile);
           this.selectedAvatarUrl.set(profile.profileImageUrl ?? null);
           this.avatarPreviewUrl.set(resolveApiUrl(profile.profileImageUrl));
@@ -165,6 +246,12 @@ export class EditProfilePageComponent {
           );
         }
       });
+  }
+
+  private configureCurrentPasswordField(hasPassword: boolean): void {
+    const currentPasswordControl = this.form.controls.currentPassword;
+    currentPasswordControl.setValidators(hasPassword ? [Validators.required] : []);
+    currentPasswordControl.updateValueAndValidity();
   }
 
   private uploadAvatar(file: File): void {

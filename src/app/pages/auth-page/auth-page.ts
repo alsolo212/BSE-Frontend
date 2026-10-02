@@ -8,10 +8,20 @@ import {
   ValidatorFn,
   Validators
 } from '@angular/forms';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  OnDestroy,
+  signal,
+  ViewChild
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { apiConfig } from '../../core/config/api.config';
 import { extractApiError } from '../../core/http/api-error';
 import { SiteShellComponent } from '../../shared/site-shell/site-shell.component';
 
@@ -36,7 +46,7 @@ const passwordMatchValidator: ValidatorFn = (control: AbstractControl): Validati
   styleUrl: './auth-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AuthPageComponent {
+export class AuthPageComponent implements AfterViewInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly router = inject(Router);
@@ -47,6 +57,12 @@ export class AuthPageComponent {
   protected readonly loginPasswordVisible = signal(false);
   protected readonly registerPasswordVisible = signal(false);
   protected readonly registerConfirmPasswordVisible = signal(false);
+  protected readonly isGoogleSubmitting = signal(false);
+
+  @ViewChild('googleButton', { static: true })
+  private readonly googleButton?: ElementRef<HTMLDivElement>;
+
+  private googleInitializationTimer: number | null = null;
 
   protected readonly loginForm = this.formBuilder.group({
     email: ['', [Validators.required, Validators.email]],
@@ -65,6 +81,16 @@ export class AuthPageComponent {
       validators: [passwordMatchValidator]
     }
   );
+
+  ngAfterViewInit(): void {
+    this.initializeGoogleButtonWhenReady();
+  }
+
+  ngOnDestroy(): void {
+    if (this.googleInitializationTimer !== null) {
+      window.clearTimeout(this.googleInitializationTimer);
+    }
+  }
 
   protected setMode(mode: AuthMode): void {
     this.mode.set(mode);
@@ -109,6 +135,56 @@ export class AuthPageComponent {
 
   protected registerFormHasError(errorCode: string): boolean {
     return this.registerForm.touched && this.registerForm.hasError(errorCode);
+  }
+
+  private initializeGoogleButtonWhenReady(): void {
+    const googleIdentity = window.google?.accounts.id;
+    if (googleIdentity && this.googleButton) {
+      googleIdentity.initialize({
+        client_id: apiConfig.googleClientId,
+        callback: response => this.submitGoogle(response.credential),
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+
+      googleIdentity.renderButton(this.googleButton.nativeElement, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'rectangular',
+        width: 360
+      });
+      return;
+    }
+
+    this.googleInitializationTimer = window.setTimeout(
+      () => this.initializeGoogleButtonWhenReady(),
+      100
+    );
+  }
+
+  private submitGoogle(idToken: string): void {
+    if (this.isGoogleSubmitting()) {
+      return;
+    }
+
+    this.isGoogleSubmitting.set(true);
+    this.errorMessage.set(null);
+
+    this.authService
+      .loginWithGoogle({ idToken })
+      .pipe(finalize(() => this.isGoogleSubmitting.set(false)))
+      .subscribe({
+        next: () => {
+          void this.router.navigateByUrl('/profile');
+        },
+        error: error => {
+          this.errorMessage.set(
+            extractApiError(error, 'Unable to sign in with Google right now.')
+          );
+        }
+      });
   }
 
   private submitLogin(): void {

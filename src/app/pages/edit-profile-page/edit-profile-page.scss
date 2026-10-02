@@ -106,6 +106,16 @@
   gap: var(--space-12);
 }
 
+.set-password-dialog {
+  width: min(100%, 460px);
+}
+
+.set-password-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
 .submit-button {
   margin-top: var(--space-12);
 }

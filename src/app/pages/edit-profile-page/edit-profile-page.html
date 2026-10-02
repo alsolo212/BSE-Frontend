@@ -59,18 +59,20 @@
             <p class="field-error">Phone should contain numbers only.</p>
           }
 
-          <label class="form-field form-field--with-action">
-            <input
-              class="form-input"
-              formControlName="currentPassword"
-              placeholder="Confirm password"
-              [type]="passwordVisible() ? 'text' : 'password'" />
-            <button class="field-action" (click)="togglePasswordVisibility()" type="button" aria-label="Toggle password visibility">
-              <img alt="" [src]="passwordVisible() ? 'assets/icons/eye-off.svg' : 'assets/icons/eye.svg'" />
-            </button>
-          </label>
-          @if (controlHasError('currentPassword')) {
-            <p class="field-error">Current password is required.</p>
+          @if (hasPassword()) {
+            <label class="form-field form-field--with-action">
+              <input
+                class="form-input"
+                formControlName="currentPassword"
+                placeholder="Confirm password"
+                [type]="passwordVisible() ? 'text' : 'password'" />
+              <button class="field-action" (click)="togglePasswordVisibility()" type="button" aria-label="Toggle password visibility">
+                <img alt="" [src]="passwordVisible() ? 'assets/icons/eye-off.svg' : 'assets/icons/eye.svg'" />
+              </button>
+            </label>
+            @if (controlHasError('currentPassword')) {
+              <p class="field-error">Current password is required.</p>
+            }
           }
 
           <button class="submit-button" [disabled]="isSubmitting()" type="submit">
@@ -80,4 +82,62 @@
       }
     </article>
   </section>
+
+  @if (showSetPasswordDialog()) {
+    <div class="dialog-backdrop">
+      <article class="dialog-card set-password-dialog" role="dialog" aria-modal="true" aria-labelledby="set-password-title">
+        <button class="dialog-card__close" (click)="closeSetPasswordDialog()" type="button" aria-label="Close">
+          <img alt="" src="assets/icons/close.svg" />
+        </button>
+
+        <div class="dialog-card__content">
+          <header class="dialog-card__header">
+            <h2 id="set-password-title">Add a password</h2>
+            <p>You signed in with Google. Add a password to also use email and password login.</p>
+          </header>
+
+          @if (setPasswordError()) {
+            <div class="form-banner form-banner--error">{{ setPasswordError() }}</div>
+          }
+
+          <form class="set-password-form" [formGroup]="setPasswordForm" (ngSubmit)="submitSetPassword()">
+            <label class="form-field form-field--with-action">
+              <input
+                class="form-input"
+                formControlName="newPassword"
+                placeholder="New password"
+                [type]="newPasswordVisible() ? 'text' : 'password'" />
+              <button class="field-action" (click)="toggleNewPasswordVisibility('new')" type="button" aria-label="Toggle new password visibility">
+                <img alt="" [src]="newPasswordVisible() ? 'assets/icons/eye-off.svg' : 'assets/icons/eye.svg'" />
+              </button>
+            </label>
+            @if (setPasswordForm.controls.newPassword.touched && setPasswordForm.controls.newPassword.invalid) {
+              <p class="field-error">Password must contain at least 6 characters.</p>
+            }
+
+            <label class="form-field form-field--with-action">
+              <input
+                class="form-input"
+                formControlName="confirmPassword"
+                placeholder="Confirm password"
+                [type]="confirmNewPasswordVisible() ? 'text' : 'password'" />
+              <button class="field-action" (click)="toggleNewPasswordVisibility('confirm')" type="button" aria-label="Toggle confirmation visibility">
+                <img alt="" [src]="confirmNewPasswordVisible() ? 'assets/icons/eye-off.svg' : 'assets/icons/eye.svg'" />
+              </button>
+            </label>
+            @if (setPasswordForm.touched && setPasswordForm.hasError('passwordMismatch')) {
+              <p class="field-error">Passwords do not match.</p>
+            }
+
+            <div class="dialog-card__actions">
+              <button (click)="closeSetPasswordDialog()" type="button">Not now</button>
+              <button [disabled]="isSettingPassword()" type="submit">
+                {{ isSettingPassword() ? 'Saving...' : 'Add password' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </article>
+    </div>
+  }
 </app-site-shell>
