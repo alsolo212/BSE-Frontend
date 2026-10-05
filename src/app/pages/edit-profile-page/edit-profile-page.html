@@ -37,23 +37,46 @@
           </button>
         </div>
 
-        <form class="edit-profile-form" [formGroup]="form" (ngSubmit)="submit()">
+        <form
+          class="edit-profile-form"
+          [formGroup]="form"
+          autocomplete="off"
+          (ngSubmit)="submit()">
           <label class="form-field">
-            <input class="form-input" formControlName="userName" placeholder="Name" type="text" />
+            <input
+              class="form-input"
+              formControlName="userName"
+              name="profile-user-name"
+              autocomplete="off"
+              placeholder="Name"
+              type="text" />
           </label>
           @if (controlHasError('userName')) {
             <p class="field-error">Name is required.</p>
           }
 
           <label class="form-field">
-            <input class="form-input" formControlName="email" placeholder="Email" type="email" />
+            <input
+              class="form-input"
+              formControlName="email"
+              name="profile-email"
+              autocomplete="off"
+              placeholder="Email"
+              type="email" />
           </label>
           @if (controlHasError('email')) {
             <p class="field-error">Enter a valid email address.</p>
           }
 
           <label class="form-field">
-            <input class="form-input" formControlName="phone" placeholder="Phone" type="tel" />
+            <input
+              class="form-input"
+              formControlName="phone"
+              name="profile-phone"
+              autocomplete="tel"
+              inputmode="tel"
+              placeholder="Phone"
+              type="tel" />
           </label>
           @if (controlHasError('phone')) {
             <p class="field-error">Phone should contain numbers only.</p>
@@ -64,6 +87,8 @@
               <input
                 class="form-input"
                 formControlName="currentPassword"
+                name="profile-current-password"
+                autocomplete="new-password"
                 placeholder="Confirm password"
                 [type]="passwordVisible() ? 'text' : 'password'" />
               <button class="field-action" (click)="togglePasswordVisibility()" type="button" aria-label="Toggle password visibility">
@@ -100,11 +125,17 @@
             <div class="form-banner form-banner--error">{{ setPasswordError() }}</div>
           }
 
-          <form class="set-password-form" [formGroup]="setPasswordForm" (ngSubmit)="submitSetPassword()">
+          <form
+            class="set-password-form"
+            [formGroup]="setPasswordForm"
+            autocomplete="off"
+            (ngSubmit)="submitSetPassword()">
             <label class="form-field form-field--with-action">
               <input
                 class="form-input"
                 formControlName="newPassword"
+                name="profile-new-password"
+                autocomplete="new-password"
                 placeholder="New password"
                 [type]="newPasswordVisible() ? 'text' : 'password'" />
               <button class="field-action" (click)="toggleNewPasswordVisibility('new')" type="button" aria-label="Toggle new password visibility">
@@ -119,6 +150,8 @@
               <input
                 class="form-input"
                 formControlName="confirmPassword"
+                name="profile-confirm-password"
+                autocomplete="new-password"
                 placeholder="Confirm password"
                 [type]="confirmNewPasswordVisible() ? 'text' : 'password'" />
               <button class="field-action" (click)="toggleNewPasswordVisibility('confirm')" type="button" aria-label="Toggle confirmation visibility">

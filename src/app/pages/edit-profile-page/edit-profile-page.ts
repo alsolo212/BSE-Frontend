@@ -50,6 +50,7 @@ export class EditProfilePageComponent {
   protected readonly isDragging = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly profile = signal<UserProfile | null>(null);
+  protected readonly canEditEmail = this.authService.isAdmin;
   protected readonly hasPassword = signal(true);
   protected readonly showSetPasswordDialog = signal(false);
   protected readonly isSettingPassword = signal(false);
@@ -78,6 +79,7 @@ export class EditProfilePageComponent {
   );
 
   constructor() {
+    this.configureEmailField(false);
     this.loadProfile();
   }
 
@@ -228,6 +230,7 @@ export class EditProfilePageComponent {
         next: ({ profile, currentUser }) => {
           const userHasPassword = currentUser.hasPassword !== false;
           this.hasPassword.set(userHasPassword);
+          this.configureEmailField(this.canEditEmail());
           this.configureCurrentPasswordField(userHasPassword);
           this.showSetPasswordDialog.set(!userHasPassword);
           this.profile.set(profile);
@@ -252,6 +255,16 @@ export class EditProfilePageComponent {
     const currentPasswordControl = this.form.controls.currentPassword;
     currentPasswordControl.setValidators(hasPassword ? [Validators.required] : []);
     currentPasswordControl.updateValueAndValidity();
+  }
+
+  private configureEmailField(canEditEmail: boolean): void {
+    const emailControl = this.form.controls.email;
+
+    if (canEditEmail) {
+      emailControl.enable({ emitEvent: false });
+    } else {
+      emailControl.disable({ emitEvent: false });
+    }
   }
 
   private uploadAvatar(file: File): void {
