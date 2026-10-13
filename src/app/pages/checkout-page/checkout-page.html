@@ -105,35 +105,19 @@
 
             @if (isCardPayment()) {
               <div class="card-payment-fields">
-                <label class="form-field">
-                  <input class="form-input" formControlName="cardNumber" placeholder="Enter Card Number" type="text" />
-                  @if (controlHasError('cardNumber')) {
-                    <p class="field-error">Enter a valid card number.</p>
+                <p class="checkout-note">
+                  Enter your card details securely in BSE. Stripe Elements protects your card number and CVC; BSE does not store them.
+                </p>
+
+                <div class="stripe-card-element" [class.stripe-card-element--loading]="isStripeLoading()">
+                  <div #cardElementContainer></div>
+                  @if (isStripeLoading()) {
+                    <span>Loading secure card form...</span>
                   }
-                </label>
-
-                <div class="checkout-form__row">
-                  <label class="form-field">
-                    <input class="form-input" formControlName="cardExpiry" placeholder="MM/YY" type="text" />
-                    @if (controlHasError('cardExpiry')) {
-                      <p class="field-error">Enter card expiry in MM/YY.</p>
-                    }
-                  </label>
-
-                  <label class="form-field form-field--with-action">
-                    <input
-                      class="form-input"
-                      formControlName="cardCvc"
-                      placeholder="CVC"
-                      [type]="cardCvcVisible() ? 'text' : 'password'" />
-                    <button class="field-action" (click)="toggleCardCvcVisibility()" type="button" aria-label="Toggle CVC visibility">
-                      <img alt="" [src]="cardCvcVisible() ? 'assets/icons/eye-off.svg' : 'assets/icons/eye.svg'" />
-                    </button>
-                    @if (controlHasError('cardCvc')) {
-                      <p class="field-error">Enter a valid CVC.</p>
-                    }
-                  </label>
                 </div>
+                @if (cardErrorMessage()) {
+                  <p class="field-error">{{ cardErrorMessage() }}</p>
+                }
 
                 <label class="checkbox-row" [class.checkbox-row--checked]="form.controls.saveCard.value">
                   <input formControlName="saveCard" type="checkbox" />

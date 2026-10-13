@@ -18,6 +18,10 @@ export function extractApiError(error: unknown, fallbackMessage = 'Something wen
     return errorBody.message;
   }
 
+  if (typeof errorBody?.detail === 'string' && errorBody.detail.trim()) {
+    return errorBody.detail;
+  }
+
   if (errorBody?.errors && typeof errorBody.errors === 'object') {
     const messages = Object.values(errorBody.errors as Record<string, string[]>)
       .flat()

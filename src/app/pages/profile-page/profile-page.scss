@@ -612,6 +612,11 @@
   color: var(--color-surface);
 }
 
+.sold-status-badge--arrived {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
 .sold-status-badge--refusal {
   background: var(--color-danger);
   color: var(--color-surface);
@@ -647,6 +652,39 @@
   color: var(--color-text-secondary);
 }
 
+.payment-status-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: var(--space-4) var(--space-12);
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+}
+
+.payment-status-badge--pending {
+  background: var(--color-warning);
+}
+
+.payment-status-badge--transferred {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.payment-status-badge--refunded,
+.payment-status-badge--failed {
+  background: var(--color-danger);
+  color: var(--color-surface);
+}
+
+.payment-status-badge--cash {
+  background: var(--color-divider);
+  color: var(--color-text-secondary);
+}
+
 .product-row--order-muted {
   background: var(--color-border-light);
 }
@@ -660,6 +698,14 @@
   color: var(--color-text-secondary);
   font-size: 16px;
   line-height: 24px;
+}
+
+.order-countdown {
+  display: block;
+  margin-top: -2px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 16px;
 }
 
 .product-row__chips {
@@ -683,6 +729,20 @@
   font-size: 20px;
   line-height: 28px;
   font-weight: 600;
+  text-align: right;
+}
+
+.order-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.order-amount small {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 14px;
   text-align: right;
 }
 

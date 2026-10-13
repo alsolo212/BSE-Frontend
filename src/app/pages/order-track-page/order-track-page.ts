@@ -18,7 +18,9 @@ import { extractApiError } from '../../core/http/api-error';
 import {
   canBuyerCancel,
   formatPaymentMethod,
-  formatShipmentStatus
+  formatPaymentState,
+  formatShipmentStatus,
+  paymentStateTone
 } from '../../features/orders/order.constants';
 import { OrderApiService } from '../../features/orders/order-api.service';
 import { OrderDetails, ShipmentStatus } from '../../features/orders/order.models';
@@ -58,6 +60,7 @@ export class OrderTrackPageComponent {
     const currentOrder = this.order();
     return currentOrder ? canBuyerCancel(currentOrder.status) : false;
   });
+  protected readonly canConfirmReceipt = computed(() => this.order()?.status === 'ReadyForPickup');
   protected readonly hasExistingReview = computed(() => {
     const currentOrder = this.order();
     const currentUserId = this.authService.currentUser()?.id;
@@ -97,7 +100,7 @@ export class OrderTrackPageComponent {
       return 'bought';
     }
 
-    if (order.shipment?.status === 'Arrived') {
+    if (order.status === 'ReadyForPickup' || order.shipment?.status === 'Arrived') {
       return 'arrived';
     }
 
@@ -115,7 +118,7 @@ export class OrderTrackPageComponent {
       case 'refusal':
         return 'Refusal';
       case 'arrived':
-        return 'Arrived';
+        return 'Ready for pickup';
       case 'bought':
         return 'Bought';
       default:
@@ -143,6 +146,14 @@ export class OrderTrackPageComponent {
 
   protected formatPaymentMethod(value: OrderDetails['paymentMethod']): string {
     return formatPaymentMethod(value);
+  }
+
+  protected paymentStateLabel(order: OrderDetails): string {
+    return formatPaymentState(order.paymentState, order.paymentMethod);
+  }
+
+  protected paymentStateTone(order: OrderDetails): ReturnType<typeof paymentStateTone> {
+    return paymentStateTone(order.paymentState, order.paymentMethod);
   }
 
   protected formatShipmentStatus(value?: ShipmentStatus | null): string {
@@ -225,6 +236,23 @@ export class OrderTrackPageComponent {
         },
         error: error => {
           this.errorMessage.set(extractApiError(error, 'Unable to refuse this order right now.'));
+        }
+      });
+  }
+
+  protected confirmReceipt(): void {
+    if (!this.orderId || !this.canConfirmReceipt()) {
+      return;
+    }
+
+    this.isSubmitting.set(true);
+    this.orderApi
+      .confirmReceipt(this.orderId)
+      .pipe(finalize(() => this.isSubmitting.set(false)), takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: order => this.order.set(order),
+        error: error => {
+          this.errorMessage.set(extractApiError(error, 'Unable to confirm receipt right now.'));
         }
       });
   }

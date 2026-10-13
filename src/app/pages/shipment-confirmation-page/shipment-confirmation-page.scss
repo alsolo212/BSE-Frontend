@@ -228,6 +228,24 @@
   margin: var(--space-4) 0 0;
 }
 
+.shipment-note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.shipment-note--success {
+  color: var(--color-success, #2f855a);
+}
+
+.stripe-connect-container {
+  min-height: 240px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-light);
+  border-radius: 10px;
+}
+
 .checkbox-row {
   position: relative;
   display: flex;

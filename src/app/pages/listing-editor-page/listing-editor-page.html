@@ -16,6 +16,21 @@
 
       @if (isLoading()) {
         <div class="listing-editor-card__loading"></div>
+      } @else if (!isEditMode() && !isConnectReady()) {
+        <section class="connect-onboarding-section">
+          <h2>Connect your seller account</h2>
+          <p>
+            Connect Stripe before creating a product. This account will receive payouts after your orders are delivered.
+          </p>
+          <div #connectContainer class="stripe-connect-container"></div>
+          <button
+            class="secondary-button"
+            (click)="refreshConnectStatus()"
+            [disabled]="isConnectLoading()"
+            type="button">
+            {{ isConnectLoading() ? 'Checking...' : 'Check onboarding status' }}
+          </button>
+        </section>
       } @else {
         <div
           class="upload-zone"

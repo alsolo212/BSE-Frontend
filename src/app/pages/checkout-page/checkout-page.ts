@@ -4,6 +4,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
+  ViewChild,
   computed,
   inject,
   signal
@@ -15,8 +17,9 @@ import {
   Validators
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
+import { firstValueFrom, forkJoin, of } from 'rxjs';
 import { finalize } from 'rxjs/operators';
+import { loadStripe, Stripe, StripeCardElement } from '@stripe/stripe-js';
 import { resolveApiUrl } from '../../core/config/api.config';
 import { extractApiError } from '../../core/http/api-error';
 import { CartApiService } from '../../features/cart/cart-api.service';
@@ -39,12 +42,6 @@ import { SiteShellComponent } from '../../shared/site-shell/site-shell.component
 
 type CheckoutMode = 'listing' | 'cart';
 
-interface SavedCardDetails {
-  cardNumber: string;
-  cardExpiry: string;
-  cardCvc: string;
-}
-
 interface SavedBuyerDetails {
   buyerFirstName: string;
   buyerLastName: string;
@@ -63,7 +60,6 @@ interface SavedBuyerDetails {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CheckoutPageComponent {
-  private readonly savedCardStoragePrefix = 'bse.checkout.saved-card';
   private readonly savedBuyerStoragePrefix = 'bse.checkout.saved-buyer';
   private readonly cartApi = inject(CartApiService);
   private readonly destroyRef = inject(DestroyRef);
@@ -80,13 +76,13 @@ export class CheckoutPageComponent {
   protected readonly isLoading = signal(true);
   protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly cardErrorMessage = signal<string | null>(null);
+  protected readonly isStripeLoading = signal(false);
   protected readonly listing = signal<ListingDetails | null>(null);
   protected readonly cartItems = signal<CartItem[]>([]);
   protected readonly profile = signal<UserProfile | null>(null);
-  protected readonly savedCard = signal<SavedCardDetails | null>(null);
   protected readonly savedBuyerDetails = signal<SavedBuyerDetails | null>(null);
   protected readonly selectedPaymentMethod = signal<PaymentMethod>('CashOnDelivery');
-  protected readonly cardCvcVisible = signal(false);
   protected readonly paymentOptions = paymentMethodOptions;
   protected readonly isCartMode = computed(() => this.mode === 'cart');
   protected readonly isCardPayment = computed(() => this.selectedPaymentMethod() === 'Card');
@@ -103,12 +99,20 @@ export class CheckoutPageComponent {
     return (this.listing()?.price ?? 0) * this.form.controls.quantity.getRawValue();
   });
 
+  private stripe: Stripe | null = null;
+  private stripeCardElement: StripeCardElement | null = null;
+  private stripePublishableKey: string | null = null;
+  private cardElementContainer: ElementRef<HTMLElement> | null = null;
+
+  @ViewChild('cardElementContainer')
+  private set cardElementContainerRef(value: ElementRef<HTMLElement> | undefined) {
+    this.cardElementContainer = value ?? null;
+    this.mountCardElement();
+  }
+
   protected readonly form = this.formBuilder.group({
     paymentMethod: ['CashOnDelivery' as PaymentMethod, [Validators.required]],
     quantity: [1, [Validators.required, Validators.min(1)]],
-    cardNumber: ['', [Validators.maxLength(32)]],
-    cardExpiry: ['', [Validators.maxLength(5)]],
-    cardCvc: ['', [Validators.maxLength(4)]],
     saveCard: [false],
     saveBuyerDetails: [false],
     buyerFirstName: ['', [Validators.required, Validators.maxLength(120)]],
@@ -125,20 +129,10 @@ export class CheckoutPageComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(method => {
         this.selectedPaymentMethod.set(method);
-
         if (method === 'Card') {
-          const savedCard = this.savedCard();
-          if (savedCard) {
-            this.form.patchValue(
-              {
-                cardNumber: savedCard.cardNumber,
-                cardExpiry: savedCard.cardExpiry,
-                cardCvc: savedCard.cardCvc,
-                saveCard: true
-              },
-              { emitEvent: false }
-            );
-          }
+          void this.initializeStripeCardElement();
+        } else {
+          this.unmountCardElement();
         }
       });
 
@@ -218,10 +212,6 @@ export class CheckoutPageComponent {
     this.goBack();
   }
 
-  protected toggleCardCvcVisibility(): void {
-    this.cardCvcVisible.update(value => !value);
-  }
-
   protected goBack(): void {
     if (this.isCartMode()) {
       void this.router.navigateByUrl('/cart');
@@ -233,7 +223,7 @@ export class CheckoutPageComponent {
     }
   }
 
-  protected submit(): void {
+  protected async submit(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -255,27 +245,41 @@ export class CheckoutPageComponent {
       return;
     }
 
-    if (rawValue.paymentMethod === 'Card') {
-      if (!rawValue.cardNumber.trim() || !rawValue.cardExpiry.trim() || !rawValue.cardCvc.trim()) {
-        this.errorMessage.set('Fill in all card fields to pay by card.');
-        return;
-      }
-    }
-
     this.errorMessage.set(null);
     this.isSubmitting.set(true);
     const requestBase = {
       paymentMethod: rawValue.paymentMethod,
-      cardNumber: rawValue.cardNumber.trim() || null,
-      cardExpiry: rawValue.cardExpiry.trim() || null,
-      cardCvc: rawValue.cardCvc.trim() || null,
       buyerFirstName: rawValue.buyerFirstName.trim(),
       buyerLastName: rawValue.buyerLastName.trim(),
       buyerEmail: rawValue.buyerEmail.trim(),
       buyerPhone: rawValue.buyerPhone.trim(),
       deliveryAddress: rawValue.deliveryAddress.trim(),
-      deliveryCity: rawValue.deliveryAddress.trim()
+      deliveryCity: (
+        rawValue.deliveryCity.trim() ||
+        this.savedBuyerDetails()?.deliveryCity?.trim() ||
+        rawValue.deliveryAddress.trim()
+      )
     };
+
+    this.persistSavedBuyerPreference(rawValue);
+
+    if (rawValue.paymentMethod === 'Card') {
+      const request = this.isCartMode()
+        ? {
+            ...requestBase,
+            cartItemIds: this.selectedCartItems().map(item => item.id),
+            saveCard: rawValue.saveCard
+          }
+        : {
+            ...requestBase,
+            listingId: this.listingId!,
+            quantity: rawValue.quantity,
+            saveCard: rawValue.saveCard
+          };
+
+      await this.submitCardPayment(request);
+      return;
+    }
 
     if (this.isCartMode()) {
       this.orderApi
@@ -286,7 +290,6 @@ export class CheckoutPageComponent {
         .pipe(finalize(() => this.isSubmitting.set(false)), takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: () => {
-            this.persistSavedCardPreference(rawValue);
             this.persistSavedBuyerPreference(rawValue);
             void this.router.navigate(['/profile'], { queryParams: { tab: 'orders' } });
           },
@@ -308,7 +311,6 @@ export class CheckoutPageComponent {
       .pipe(finalize(() => this.isSubmitting.set(false)), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: order => {
-          this.persistSavedCardPreference(rawValue);
           this.persistSavedBuyerPreference(rawValue);
           void this.router.navigate(['/orders', order.id, 'track']);
         },
@@ -318,6 +320,111 @@ export class CheckoutPageComponent {
       });
   }
 
+  private async submitCardPayment(
+    request: Parameters<OrderApiService['createPaymentIntent']>[0]
+  ): Promise<void> {
+    if (!this.stripe || !this.stripeCardElement) {
+      this.errorMessage.set('The secure card field is still loading. Please try again.');
+      this.isSubmitting.set(false);
+      await this.initializeStripeCardElement();
+      return;
+    }
+
+    try {
+      const response = await firstValueFrom(this.orderApi.createPaymentIntent(request));
+      const result = await this.stripe.confirmCardPayment(response.clientSecret, {
+        payment_method: {
+          card: this.stripeCardElement,
+          billing_details: {
+            name: `${request.buyerFirstName} ${request.buyerLastName}`.trim(),
+            email: request.buyerEmail
+          }
+        }
+      });
+
+      if (result.error) {
+        this.cardErrorMessage.set(result.error.message ?? 'The card payment could not be completed.');
+        return;
+      }
+
+      if (result.paymentIntent?.status !== 'succeeded') {
+        this.errorMessage.set('The payment is still processing. Please check your orders shortly.');
+        return;
+      }
+
+      this.persistSavedBuyerPreference(this.form.getRawValue());
+      await this.router.navigate(['/profile'], { queryParams: { tab: 'orders', payment: 'success' } });
+    } catch (error) {
+      this.errorMessage.set(extractApiError(error, 'Unable to complete card payment right now.'));
+    } finally {
+      this.isSubmitting.set(false);
+    }
+  }
+
+  private async initializeStripeCardElement(): Promise<void> {
+    if (this.stripeCardElement || this.isStripeLoading()) {
+      this.mountCardElement();
+      return;
+    }
+
+    this.isStripeLoading.set(true);
+    try {
+      if (!this.stripePublishableKey) {
+        const config = await firstValueFrom(this.orderApi.getStripeConfig());
+        this.stripePublishableKey = config.publishableKey;
+      }
+
+      this.stripe = await loadStripe(this.stripePublishableKey);
+      if (!this.stripe) {
+        throw new Error('Stripe.js could not be initialized.');
+      }
+
+      this.mountCardElement();
+    } catch (error) {
+      this.errorMessage.set(extractApiError(error, 'Unable to load the secure card form right now.'));
+    } finally {
+      this.isStripeLoading.set(false);
+    }
+  }
+
+  private mountCardElement(): void {
+    if (
+      !this.stripe ||
+      !this.cardElementContainer ||
+      this.stripeCardElement ||
+      this.selectedPaymentMethod() !== 'Card'
+    ) {
+      return;
+    }
+
+    this.stripeCardElement = this.stripe.elements().create('card', {
+      hidePostalCode: true,
+      style: {
+        base: {
+          color: '#1f2933',
+          fontFamily: 'inherit',
+          fontSize: '16px',
+          '::placeholder': {
+            color: '#7b8794'
+          }
+        },
+        invalid: {
+          color: '#d64545'
+        }
+      }
+    });
+    this.stripeCardElement.on('change', event => {
+      this.cardErrorMessage.set(event.error?.message ?? null);
+    });
+    this.stripeCardElement.mount(this.cardElementContainer.nativeElement);
+  }
+
+  private unmountCardElement(): void {
+    this.cardErrorMessage.set(null);
+    this.stripeCardElement?.unmount();
+    this.stripeCardElement = null;
+  }
+
   protected controlHasError(
     controlName:
       | 'buyerFirstName'
@@ -325,9 +432,6 @@ export class CheckoutPageComponent {
       | 'buyerEmail'
       | 'buyerPhone'
       | 'deliveryAddress'
-      | 'cardNumber'
-      | 'cardExpiry'
-      | 'cardCvc'
       | 'quantity'
   ): boolean {
     const control = this.form.controls[controlName];
@@ -354,23 +458,18 @@ export class CheckoutPageComponent {
           this.profile.set(profile);
           this.cartItems.set(cart.items);
           this.listing.set(listing);
-          const savedCard = this.readSavedCard(profile.id);
           const savedBuyerDetails = this.readSavedBuyerDetails(profile.id);
-          this.savedCard.set(savedCard);
           this.savedBuyerDetails.set(savedBuyerDetails);
           this.form.patchValue({
             paymentMethod: 'CashOnDelivery',
-            cardNumber: savedCard?.cardNumber ?? '',
-            cardExpiry: savedCard?.cardExpiry ?? '',
-            cardCvc: savedCard?.cardCvc ?? '',
-            saveCard: !!savedCard,
+            saveCard: false,
             saveBuyerDetails: !!savedBuyerDetails,
             buyerFirstName: savedBuyerDetails?.buyerFirstName ?? '',
             buyerLastName: savedBuyerDetails?.buyerLastName ?? '',
             buyerEmail: savedBuyerDetails?.buyerEmail ?? profile.email,
             buyerPhone: savedBuyerDetails?.buyerPhone ?? profile.phone ?? '',
             deliveryAddress: savedBuyerDetails?.deliveryAddress ?? '',
-            deliveryCity: savedBuyerDetails?.deliveryAddress ?? savedBuyerDetails?.deliveryCity ?? ''
+            deliveryCity: savedBuyerDetails?.deliveryCity ?? ''
           });
           this.selectedPaymentMethod.set('CashOnDelivery');
 
@@ -390,24 +489,6 @@ export class CheckoutPageComponent {
       });
   }
 
-  private persistSavedCardPreference(rawValue: ReturnType<typeof this.form.getRawValue>): void {
-    const profile = this.profile();
-    if (!profile || rawValue.paymentMethod !== 'Card') {
-      return;
-    }
-
-    if (rawValue.saveCard) {
-      this.writeSavedCard(profile.id, {
-        cardNumber: rawValue.cardNumber.trim(),
-        cardExpiry: rawValue.cardExpiry.trim(),
-        cardCvc: rawValue.cardCvc.trim()
-      });
-      return;
-    }
-
-    this.clearSavedCard(profile.id);
-  }
-
   private persistSavedBuyerPreference(rawValue: ReturnType<typeof this.form.getRawValue>): void {
     const profile = this.profile();
     if (!profile) {
@@ -420,7 +501,8 @@ export class CheckoutPageComponent {
         buyerLastName: rawValue.buyerLastName.trim(),
         buyerEmail: rawValue.buyerEmail.trim(),
         buyerPhone: rawValue.buyerPhone.trim(),
-        deliveryAddress: rawValue.deliveryAddress.trim()
+        deliveryAddress: rawValue.deliveryAddress.trim(),
+        deliveryCity: rawValue.deliveryCity.trim() || rawValue.deliveryAddress.trim()
       };
 
       this.writeSavedBuyerDetails(profile.id, details);
@@ -428,28 +510,6 @@ export class CheckoutPageComponent {
     }
 
     this.clearSavedBuyerDetails(profile.id);
-  }
-
-  private readSavedCard(userId: string): SavedCardDetails | null {
-    if (typeof window === 'undefined') {
-      return null;
-    }
-
-    const rawValue = window.localStorage.getItem(this.buildSavedCardStorageKey(userId));
-    if (!rawValue) {
-      return null;
-    }
-
-    try {
-      const parsed = JSON.parse(rawValue) as SavedCardDetails;
-      if (!parsed.cardNumber || !parsed.cardExpiry || !parsed.cardCvc) {
-        return null;
-      }
-
-      return parsed;
-    } catch {
-      return null;
-    }
   }
 
   private readSavedBuyerDetails(userId: string): SavedBuyerDetails | null {
@@ -480,15 +540,6 @@ export class CheckoutPageComponent {
     }
   }
 
-  private writeSavedCard(userId: string, card: SavedCardDetails): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    window.localStorage.setItem(this.buildSavedCardStorageKey(userId), JSON.stringify(card));
-    this.savedCard.set(card);
-  }
-
   private writeSavedBuyerDetails(userId: string, details: SavedBuyerDetails): void {
     if (typeof window === 'undefined') {
       return;
@@ -498,15 +549,6 @@ export class CheckoutPageComponent {
     this.savedBuyerDetails.set(details);
   }
 
-  private clearSavedCard(userId: string): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    window.localStorage.removeItem(this.buildSavedCardStorageKey(userId));
-    this.savedCard.set(null);
-  }
-
   private clearSavedBuyerDetails(userId: string): void {
     if (typeof window === 'undefined') {
       return;
@@ -514,10 +556,6 @@ export class CheckoutPageComponent {
 
     window.localStorage.removeItem(this.buildSavedBuyerStorageKey(userId));
     this.savedBuyerDetails.set(null);
-  }
-
-  private buildSavedCardStorageKey(userId: string): string {
-    return `${this.savedCardStoragePrefix}.${userId}`;
   }
 
   private buildSavedBuyerStorageKey(userId: string): string {

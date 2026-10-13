@@ -65,6 +65,45 @@
   min-height: 560px;
 }
 
+.connect-onboarding-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.connect-onboarding-section h2 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+}
+
+.connect-onboarding-section p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.stripe-connect-container {
+  min-height: 240px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-light);
+  border-radius: 10px;
+}
+
+.secondary-button {
+  min-height: 40px;
+  padding: var(--space-8) var(--space-16);
+  border: 1px solid var(--color-border-light);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: 16px;
+  line-height: 24px;
+}
+
 .upload-zone {
   display: flex;
   flex-direction: column;

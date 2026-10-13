@@ -15,7 +15,11 @@ import { finalize } from 'rxjs/operators';
 import { AuthService } from '../../core/auth/auth.service';
 import { resolveApiUrl } from '../../core/config/api.config';
 import { extractApiError } from '../../core/http/api-error';
-import { formatShipmentStatus } from '../../features/orders/order.constants';
+import {
+  formatPaymentState,
+  formatShipmentStatus,
+  paymentStateTone
+} from '../../features/orders/order.constants';
 import { OrderApiService } from '../../features/orders/order-api.service';
 import { OrderDetails, ShipmentStatus } from '../../features/orders/order.models';
 import { ReviewApiService } from '../../features/reviews/review-api.service';
@@ -85,13 +89,17 @@ export class SellerOrderTrackPageComponent {
     void this.router.navigate(['/profile'], { queryParams: { tab: 'sold' } });
   }
 
-  protected trackState(order: OrderDetails): 'ordered' | 'awaiting-shipment' | 'in-delivery' | 'refusal' | 'sold' {
+  protected trackState(order: OrderDetails): 'ordered' | 'awaiting-shipment' | 'in-delivery' | 'ready-for-pickup' | 'refusal' | 'sold' {
     if (order.status === 'Declined' || order.status === 'Cancelled' || order.shipment?.status === 'Cancelled') {
       return 'refusal';
     }
 
-    if (order.status === 'Delivered' || order.shipment?.status === 'Arrived') {
+    if (order.status === 'Delivered') {
       return 'sold';
+    }
+
+    if (order.status === 'ReadyForPickup' || order.shipment?.status === 'Arrived') {
+      return 'ready-for-pickup';
     }
 
     if (order.status === 'Shipped' || order.shipment?.status === 'InDelivery') {
@@ -111,6 +119,8 @@ export class SellerOrderTrackPageComponent {
         return 'Awaiting shipment';
       case 'in-delivery':
         return 'In delivery';
+      case 'ready-for-pickup':
+        return 'Ready for pickup';
       case 'refusal':
         return 'Refusal';
       case 'sold':
@@ -153,6 +163,14 @@ export class SellerOrderTrackPageComponent {
 
   protected formatShipmentStatus(value?: ShipmentStatus | null): string {
     return formatShipmentStatus(value);
+  }
+
+  protected paymentStateLabel(order: OrderDetails): string {
+    return formatPaymentState(order.paymentState, order.paymentMethod);
+  }
+
+  protected paymentStateTone(order: OrderDetails): ReturnType<typeof paymentStateTone> {
+    return paymentStateTone(order.paymentState, order.paymentMethod);
   }
 
   protected isStepActive(step: ShipmentStatus): boolean {

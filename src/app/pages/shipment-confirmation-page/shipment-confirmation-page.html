@@ -62,13 +62,20 @@
           </section>
 
           <section class="shipment-section">
-            <h2>Card for receiving funds</h2>
-            <label class="form-field">
-              <input class="form-input" formControlName="payoutCardMasked" placeholder="Enter Card Number" type="text" />
-              @if (controlHasError('payoutCardMasked')) {
-                <p class="field-error">Enter the payout card details.</p>
-              }
-            </label>
+            @if (currentOrder.paymentMethod === 'CashOnDelivery') {
+              <h2>Card for receiving funds</h2>
+              <label class="form-field">
+                <input class="form-input" formControlName="payoutCardMasked" placeholder="Enter test card number" type="text" />
+                @if (controlHasError('payoutCardMasked')) {
+                  <p class="field-error">Enter the payout card details.</p>
+                }
+              </label>
+              <p class="shipment-note">This is only a placeholder for cash on delivery. It is stored as a masked value and is not sent to Stripe.</p>
+            } @else {
+              <h2>Stripe payout account</h2>
+              <p class="shipment-note">Seller payout: the order price minus the Stripe processing fee. BSE commission: 0%.</p>
+              <p class="shipment-note shipment-note--success">Stripe payout account is connected from product creation.</p>
+            }
           </section>
 
           <section class="shipment-section">

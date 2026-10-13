@@ -36,7 +36,9 @@ import {
   canSellerTrack,
   formatOrderStatus,
   formatPaymentMethod,
-  formatShipmentStatus
+  formatPaymentState,
+  formatShipmentStatus,
+  paymentStateTone
 } from '../../features/orders/order.constants';
 import { OrderApiService } from '../../features/orders/order-api.service';
 import { OrderSummary } from '../../features/orders/order.models';
@@ -52,7 +54,7 @@ type ListingSort = (typeof listingSortOptions)[number]['value'];
 type ListingConditionFilter = 'all' | ListingCondition;
 type ListingCategoryFilter = 'all' | string;
 type ChatRoleFilter = 'all' | 'buying' | 'selling';
-type SoldOrderState = 'ordered' | 'awaiting-shipment' | 'in-delivery' | 'refusal' | 'sold';
+type SoldOrderState = 'ordered' | 'awaiting-shipment' | 'in-delivery' | 'ready-for-pickup' | 'refusal' | 'sold';
 type SoldSort = 'newest' | 'oldest' | 'price-low' | 'price-high';
 type SoldStateFilter = 'all' | SoldOrderState;
 type BuyerOrderState = 'pending' | 'in-delivery' | 'refusal' | 'arrived' | 'bought';
@@ -99,6 +101,7 @@ export class ProfilePageComponent {
   protected readonly isUploadingAttachment = signal(false);
   protected readonly isSubmittingDispute = signal(false);
   protected readonly isSubmittingReview = signal(false);
+  protected readonly currentTimeMs = signal(Date.now());
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly profile = signal<UserProfile | null>(null);
   protected readonly listings = signal<ListingSummary[]>([]);
@@ -180,7 +183,7 @@ export class ProfilePageComponent {
     { value: 'pending', label: 'Pending' },
     { value: 'in-delivery', label: 'In delivery' },
     { value: 'refusal', label: 'Refusal' },
-    { value: 'arrived', label: 'Arrived' },
+    { value: 'arrived', label: 'Ready for pickup' },
     { value: 'bought', label: 'Bought' }
   ];
   protected readonly conditionOptions = listingConditionFilterOptions;
@@ -462,6 +465,10 @@ export class ProfilePageComponent {
         this.handleActiveTabChanged();
       }
     });
+
+    timer(0, 1000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.currentTimeMs.set(Date.now()));
 
     this.loadPage();
   }
@@ -1305,7 +1312,32 @@ export class ProfilePageComponent {
 
   protected canRefuseBuyerOrder(order: OrderSummary): boolean {
     const state = this.buyerOrderState(order);
-    return state === 'pending' || state === 'in-delivery';
+    return state === 'pending' || state === 'in-delivery' || state === 'arrived';
+  }
+
+  protected orderDecisionCountdown(order: OrderSummary): string | null {
+    if (order.status !== 'Pending') {
+      return null;
+    }
+
+    const remainingMs = new Date(order.sellerDecisionDeadlineUtc).getTime() - this.currentTimeMs();
+    if (remainingMs <= 0) {
+      return 'Decision deadline reached';
+    }
+
+    const totalMinutes = Math.floor(remainingMs / 60000);
+    if (remainingMs < 5 * 60 * 1000) {
+      const seconds = Math.floor((remainingMs % 60000) / 1000);
+      return `${totalMinutes}m ${seconds.toString().padStart(2, '0')}s left`;
+    }
+
+    const days = Math.floor(totalMinutes / (24 * 60));
+    const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+    if (days > 0) {
+      return `Seller decision in about ${days}d ${hours}h`;
+    }
+
+    return `Seller decision in about ${hours}h`;
   }
 
   protected canReviewBuyerOrder(order: OrderSummary): boolean {
@@ -1325,7 +1357,7 @@ export class ProfilePageComponent {
       return 'bought';
     }
 
-    if (order.shipmentStatus === 'Arrived') {
+    if (order.status === 'ReadyForPickup' || order.shipmentStatus === 'Arrived') {
       return 'arrived';
     }
 
@@ -1343,12 +1375,20 @@ export class ProfilePageComponent {
       case 'refusal':
         return 'Refusal';
       case 'arrived':
-        return 'Arrived';
+        return 'Ready for pickup';
       case 'bought':
         return 'Bought';
       default:
         return 'Pending';
     }
+  }
+
+  protected paymentStateLabel(order: OrderSummary): string {
+    return formatPaymentState(order.paymentState, order.paymentMethod);
+  }
+
+  protected paymentStateTone(order: OrderSummary): ReturnType<typeof paymentStateTone> {
+    return paymentStateTone(order.paymentState, order.paymentMethod);
   }
 
   protected updateReviewRating(value: unknown): void {
@@ -1370,8 +1410,12 @@ export class ProfilePageComponent {
       return 'refusal';
     }
 
-    if (order.status === 'Delivered' || order.shipmentStatus === 'Arrived') {
+    if (order.status === 'Delivered') {
       return 'sold';
+    }
+
+    if (order.status === 'ReadyForPickup' || order.shipmentStatus === 'Arrived') {
+      return 'ready-for-pickup';
     }
 
     if (order.status === 'Shipped' || order.shipmentStatus === 'InDelivery') {
@@ -1391,6 +1435,8 @@ export class ProfilePageComponent {
         return 'Awaiting shipment';
       case 'in-delivery':
         return 'In delivery';
+      case 'ready-for-pickup':
+        return 'Ready for pickup';
       case 'refusal':
         return 'Refusal';
       case 'sold':

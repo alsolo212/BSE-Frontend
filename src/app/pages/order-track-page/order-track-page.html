@@ -67,6 +67,26 @@
           </span>
         </section>
 
+        <section class="track-status-row track-status-row--payment">
+          <span>Payment status:</span>
+          <span
+            class="track-payment-status-badge"
+            [class.track-payment-status-badge--pending]="paymentStateTone(currentOrder) === 'pending'"
+            [class.track-payment-status-badge--transferred]="paymentStateTone(currentOrder) === 'transferred'"
+            [class.track-payment-status-badge--refunded]="paymentStateTone(currentOrder) === 'refunded'"
+            [class.track-payment-status-badge--failed]="paymentStateTone(currentOrder) === 'failed'"
+            [class.track-payment-status-badge--cash]="paymentStateTone(currentOrder) === 'cash'">
+            {{ paymentStateLabel(currentOrder) }}
+          </span>
+        </section>
+
+        @if (canConfirmReceipt()) {
+          <button class="big-button" (click)="confirmReceipt()" [disabled]="isSubmitting()" type="button">
+            {{ isSubmitting() ? 'Confirming...' : 'Confirm receipt' }}
+          </button>
+          <p class="track-note">After confirmation, the payment is released to the seller. You can refuse the order before confirming receipt.</p>
+        }
+
         <section class="track-section">
           <h2>Payment Method</h2>
           <input

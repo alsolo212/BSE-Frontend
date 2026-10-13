@@ -350,7 +350,19 @@
                         [class.order-status-badge--bought]="buyerOrderState(order) === 'bought'">
                         {{ buyerOrderStateLabel(order) }}
                       </span>
+                      <span
+                        class="payment-status-badge"
+                        [class.payment-status-badge--pending]="paymentStateTone(order) === 'pending'"
+                        [class.payment-status-badge--transferred]="paymentStateTone(order) === 'transferred'"
+                        [class.payment-status-badge--refunded]="paymentStateTone(order) === 'refunded'"
+                        [class.payment-status-badge--failed]="paymentStateTone(order) === 'failed'"
+                        [class.payment-status-badge--cash]="paymentStateTone(order) === 'cash'">
+                        {{ paymentStateLabel(order) }}
+                      </span>
                       <p>{{ order.deliveryAddress }} &mdash; {{ order.createdAtUtc | date: 'dd.MM' }}</p>
+                      @if (orderDecisionCountdown(order); as countdown) {
+                        <small class="order-countdown">{{ countdown }}</small>
+                      }
                     </div>
 
                     <div class="product-row__meta">
@@ -508,16 +520,31 @@
                         class="sold-status-badge"
                         [class.sold-status-badge--ordered]="soldOrderState(order) === 'ordered'"
                         [class.sold-status-badge--awaiting]="soldOrderState(order) === 'awaiting-shipment'"
-                        [class.sold-status-badge--delivery]="soldOrderState(order) === 'in-delivery'"
+                      [class.sold-status-badge--delivery]="soldOrderState(order) === 'in-delivery'"
+                        [class.sold-status-badge--arrived]="soldOrderState(order) === 'ready-for-pickup'"
                         [class.sold-status-badge--refusal]="soldOrderState(order) === 'refusal'"
                         [class.sold-status-badge--sold]="soldOrderState(order) === 'sold'">
                         {{ soldOrderStateLabel(order) }}
+                      </span>
+                      <span
+                        class="payment-status-badge"
+                        [class.payment-status-badge--pending]="paymentStateTone(order) === 'pending'"
+                        [class.payment-status-badge--transferred]="paymentStateTone(order) === 'transferred'"
+                        [class.payment-status-badge--refunded]="paymentStateTone(order) === 'refunded'"
+                        [class.payment-status-badge--failed]="paymentStateTone(order) === 'failed'"
+                        [class.payment-status-badge--cash]="paymentStateTone(order) === 'cash'">
+                        {{ paymentStateLabel(order) }}
                       </span>
                       <p>{{ order.deliveryAddress }} &mdash; {{ order.createdAtUtc | date: 'dd.MM' }}</p>
                     </div>
 
                     <div class="product-row__meta">
-                      <strong>{{ order.totalAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                      <div class="order-amount">
+                        <strong>{{ order.totalAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                        @if (order.paymentMethod === 'Card') {
+                          <small>Stripe fee deducted from payout</small>
+                        }
+                      </div>
                       <div class="product-row__buttons product-row__buttons--hug">
                         @if (canAcceptOrder(order)) {
                           <button class="profile-brand-button" (click)="openShipmentConfirmation(order.id)" type="button">Accept</button>
@@ -849,7 +876,7 @@
             <img alt="" src="assets/icons/close.svg" />
           </button>
           <h2>Refuse order?</h2>
-          <p>"{{ orderToCancel.listingTitle }}" will be cancelled and returned to marketplace availability.</p>
+          <p>"{{ orderToCancel.listingTitle }}" will be cancelled and returned to marketplace availability. Card refunds are sent minus the Stripe processing fee.</p>
           <div class="dialog-card__actions">
             <button class="secondary-button" (click)="closeCancelOrderDialog()" type="button">Cancel</button>
             <button

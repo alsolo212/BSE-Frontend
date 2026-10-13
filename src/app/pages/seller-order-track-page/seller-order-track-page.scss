@@ -280,6 +280,39 @@
   color: var(--color-text-secondary);
 }
 
+.track-payment-status-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 65%;
+  padding: var(--space-4) var(--space-12);
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: right;
+}
+
+.track-payment-status-badge--pending {
+  background: var(--color-warning);
+}
+
+.track-payment-status-badge--transferred {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.track-payment-status-badge--refunded,
+.track-payment-status-badge--failed {
+  background: var(--color-danger);
+  color: var(--color-surface);
+}
+
+.track-payment-status-badge--cash {
+  background: var(--color-divider);
+  color: var(--color-text-secondary);
+}
+
 .track-total {
   display: flex;
   justify-content: space-between;

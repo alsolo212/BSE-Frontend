@@ -61,13 +61,27 @@
             [class.track-status-badge--ordered]="trackState(currentOrder) === 'ordered'"
             [class.track-status-badge--awaiting]="trackState(currentOrder) === 'awaiting-shipment'"
             [class.track-status-badge--delivery]="trackState(currentOrder) === 'in-delivery'"
+            [class.track-status-badge--arrived]="trackState(currentOrder) === 'ready-for-pickup'"
             [class.track-status-badge--refusal]="trackState(currentOrder) === 'refusal'"
             [class.track-status-badge--sold]="trackState(currentOrder) === 'sold'"
-            [disabled]="isSubmitting() || trackState(currentOrder) === 'sold' || trackState(currentOrder) === 'refusal'"
+            [disabled]="isSubmitting() || trackState(currentOrder) === 'sold' || trackState(currentOrder) === 'refusal' || trackState(currentOrder) === 'ready-for-pickup'"
             (click)="advanceTrackStatus()"
             type="button">
             {{ trackStateLabel(currentOrder) }}
           </button>
+        </section>
+
+        <section class="track-status-row track-status-row--payment">
+          <span>Payment status:</span>
+          <span
+            class="track-payment-status-badge"
+            [class.track-payment-status-badge--pending]="paymentStateTone(currentOrder) === 'pending'"
+            [class.track-payment-status-badge--transferred]="paymentStateTone(currentOrder) === 'transferred'"
+            [class.track-payment-status-badge--refunded]="paymentStateTone(currentOrder) === 'refunded'"
+            [class.track-payment-status-badge--failed]="paymentStateTone(currentOrder) === 'failed'"
+            [class.track-payment-status-badge--cash]="paymentStateTone(currentOrder) === 'cash'">
+            {{ paymentStateLabel(currentOrder) }}
+          </span>
         </section>
 
         <section class="track-section">

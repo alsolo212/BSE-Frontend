@@ -2,8 +2,11 @@ import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ChangeDetectionStrategy,
+  CUSTOM_ELEMENTS_SCHEMA,
   Component,
   DestroyRef,
+  ElementRef,
+  ViewChild,
   computed,
   inject,
   signal
@@ -24,6 +27,7 @@ import {
   listingConditionOptions
 } from '../../features/listings/listing.constants';
 import { ListingApiService } from '../../features/listings/listing-api.service';
+import { OrderApiService } from '../../features/orders/order-api.service';
 import {
   ListingCategory,
   ListingCondition,
@@ -32,6 +36,7 @@ import {
   ListingUpsertRequest
 } from '../../features/listings/listing.models';
 import { SiteShellComponent } from '../../shared/site-shell/site-shell.component';
+import { loadConnectAndInitialize, StripeConnectInstance } from '@stripe/connect-js';
 
 type EditorMode = 'create' | 'edit';
 
@@ -47,12 +52,14 @@ interface ListingEditorImage {
   imports: [CommonModule, ReactiveFormsModule, SiteShellComponent],
   templateUrl: './listing-editor-page.html',
   styleUrl: './listing-editor-page.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class ListingEditorPageComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly listingApi = inject(ListingApiService);
+  private readonly orderApi = inject(OrderApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -63,6 +70,8 @@ export class ListingEditorPageComponent {
   protected readonly isSubmitting = signal(false);
   protected readonly isUploadingImages = signal(false);
   protected readonly isDeleting = signal(false);
+  protected readonly isConnectLoading = signal(false);
+  protected readonly isConnectReady = signal(false);
   protected readonly isDragging = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly categories = signal<ListingCategory[]>([]);
@@ -82,6 +91,15 @@ export class ListingEditorPageComponent {
   );
   protected readonly submitLabel = computed(() => (this.isEditMode() ? 'Edit' : 'Create'));
   protected readonly selectedImagesCount = computed(() => this.images().length);
+
+  private connectInstance: StripeConnectInstance | null = null;
+  private connectContainer: ElementRef<HTMLElement> | null = null;
+
+  @ViewChild('connectContainer')
+  private set connectContainerRef(value: ElementRef<HTMLElement> | undefined) {
+    this.connectContainer = value ?? null;
+    this.mountConnectOnboarding();
+  }
 
   protected readonly form = this.formBuilder.group({
     title: ['', [Validators.required, Validators.maxLength(120)]],
@@ -173,6 +191,12 @@ export class ListingEditorPageComponent {
   }
 
   protected submit(): void {
+    if (!this.isEditMode() && !this.isConnectReady()) {
+      this.errorMessage.set('Connect your Stripe seller account before creating a product.');
+      this.refreshConnectStatus();
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -265,6 +289,36 @@ export class ListingEditorPageComponent {
     return formatListingCondition(condition);
   }
 
+  protected refreshConnectStatus(): void {
+    if (this.isEditMode()) {
+      return;
+    }
+
+    this.isConnectLoading.set(true);
+    this.errorMessage.set(null);
+    this.orderApi
+      .createConnectOnboardingSession()
+      .pipe(finalize(() => this.isConnectLoading.set(false)), takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: response => {
+          this.isConnectReady.set(response.isComplete);
+          if (!response.isComplete) {
+            this.connectInstance = loadConnectAndInitialize({
+              publishableKey: response.publishableKey,
+              fetchClientSecret: async () => response.clientSecret,
+              locale: 'en'
+            });
+            this.mountConnectOnboarding();
+          }
+        },
+        error: error => {
+          this.errorMessage.set(
+            extractApiError(error, 'Unable to load Stripe Connect onboarding right now.')
+          );
+        }
+      });
+  }
+
   private loadPage(): void {
     if (this.isEditMode() && !this.listingId) {
       this.errorMessage.set('Listing id is missing for edit mode.');
@@ -305,6 +359,10 @@ export class ListingEditorPageComponent {
                 previewUrl: resolveApiUrl(image.url) ?? image.url
               }))
             );
+          }
+
+          if (!this.isEditMode()) {
+            this.refreshConnectStatus();
           }
         },
         error: error => {
@@ -367,5 +425,19 @@ export class ListingEditorPageComponent {
       fileName: image.fileName,
       previewUrl: resolveApiUrl(image.url) ?? image.url
     };
+  }
+
+  private mountConnectOnboarding(): void {
+    if (!this.connectInstance || !this.connectContainer || this.isConnectReady()) {
+      return;
+    }
+
+    const element = this.connectInstance.create('account-onboarding');
+    element.setOnLoadError(({ error }) => {
+      this.errorMessage.set(
+        `Stripe onboarding could not be loaded (${error}). Enable Stripe Connect in the sandbox and try again.`
+      );
+    });
+    this.connectContainer.nativeElement.replaceChildren(element);
   }
 }

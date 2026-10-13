@@ -108,7 +108,7 @@ export class ShipmentConfirmationPageComponent {
         senderFirstName: rawValue.senderFirstName.trim(),
         senderLastName: rawValue.senderLastName.trim(),
         senderPhone: rawValue.senderPhone.trim(),
-        payoutCardMasked: rawValue.payoutCardMasked.trim()
+        payoutCardMasked: this.maskPayoutCard(rawValue.payoutCardMasked)
       })
       .pipe(finalize(() => this.isSubmitting.set(false)), takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -189,6 +189,14 @@ export class ShipmentConfirmationPageComponent {
             payoutCardMasked: savedSellerDetails?.payoutCardMasked ?? order.shipment?.payoutCardMasked ?? '',
             saveSellerDetails: !!savedSellerDetails
           });
+
+          if (order.paymentMethod === 'Card') {
+            this.form.controls.payoutCardMasked.clearValidators();
+            this.form.controls.payoutCardMasked.updateValueAndValidity({ emitEvent: false });
+          } else {
+            this.form.controls.payoutCardMasked.setValidators([Validators.required, Validators.maxLength(128)]);
+            this.form.controls.payoutCardMasked.updateValueAndValidity({ emitEvent: false });
+          }
         },
         error: error => {
           this.errorMessage.set(
@@ -240,7 +248,12 @@ export class ShipmentConfirmationPageComponent {
         return null;
       }
 
-      return parsed;
+      const sanitized = {
+        ...parsed,
+        payoutCardMasked: this.maskPayoutCard(parsed.payoutCardMasked)
+      };
+      window.localStorage.setItem(this.buildSavedSellerStorageKey(userId), JSON.stringify(sanitized));
+      return sanitized;
     } catch {
       return null;
     }
@@ -267,4 +280,10 @@ export class ShipmentConfirmationPageComponent {
   private buildSavedSellerStorageKey(userId: string): string {
     return `${this.savedSellerStoragePrefix}.${userId}`;
   }
+
+  private maskPayoutCard(value: string): string {
+    const digits = value.replace(/\D/g, '');
+    return digits.length >= 4 ? `**** **** **** ${digits.slice(-4)}` : value.trim();
+  }
+
 }
