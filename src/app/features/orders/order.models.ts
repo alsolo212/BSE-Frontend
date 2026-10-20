@@ -6,6 +6,11 @@ export type PaymentState = 'NotApplicable' | 'Paid' | 'TransferPending' | 'Trans
 export type OrderStatus = 'Pending' | 'Accepted' | 'Declined' | 'Cancelled' | 'Shipped' | 'Delivered' | 'ReadyForPickup' | 'Expired';
 export type ShipmentStatus = 'Pending' | 'ReadyToShip' | 'InDelivery' | 'Arrived' | 'Cancelled';
 
+export interface OrderChangedEvent {
+  orderId: string;
+  changeType: 'created' | 'updated';
+}
+
 export interface OrderSummary {
   id: string;
   listingId: string;

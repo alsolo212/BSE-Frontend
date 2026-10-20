@@ -86,15 +86,23 @@
 
         <section class="track-section">
           <h2>Payout</h2>
-          <label class="track-input-wrap">
+          @if (currentOrder.paymentMethod === 'Card') {
             <input
               class="track-input"
-              [value]="currentOrder.shipment?.payoutCardMasked || ''"
+              value="Stripe payout account"
               disabled
-              placeholder="Card Number"
               type="text" />
-            <img alt="" src="assets/icons/eye.svg" />
-          </label>
+          } @else {
+            <label class="track-input-wrap">
+              <input
+                class="track-input"
+                [value]="currentOrder.shipment?.payoutCardMasked || ''"
+                disabled
+                placeholder="Card Number"
+                type="text" />
+              <img alt="" src="assets/icons/eye.svg" />
+            </label>
+          }
         </section>
 
         <section class="track-total">

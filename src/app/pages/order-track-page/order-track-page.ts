@@ -10,8 +10,8 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin, of, switchMap } from 'rxjs';
-import { finalize } from 'rxjs/operators';
+import { EMPTY, filter, forkJoin, of, switchMap } from 'rxjs';
+import { catchError, finalize } from 'rxjs/operators';
 import { AuthService } from '../../core/auth/auth.service';
 import { resolveApiUrl } from '../../core/config/api.config';
 import { extractApiError } from '../../core/http/api-error';
@@ -24,6 +24,7 @@ import {
 } from '../../features/orders/order.constants';
 import { OrderApiService } from '../../features/orders/order-api.service';
 import { OrderDetails, ShipmentStatus } from '../../features/orders/order.models';
+import { OrderRealtimeService } from '../../features/orders/order-realtime.service';
 import { ReviewApiService } from '../../features/reviews/review-api.service';
 import { Review } from '../../features/reviews/review.models';
 import { SiteShellComponent } from '../../shared/site-shell/site-shell.component';
@@ -40,6 +41,7 @@ export class OrderTrackPageComponent {
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly orderApi = inject(OrderApiService);
+  private readonly orderRealtime = inject(OrderRealtimeService);
   private readonly reviewApi = inject(ReviewApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -81,6 +83,19 @@ export class OrderTrackPageComponent {
 
   constructor() {
     this.loadPage();
+    void this.orderRealtime.connect().catch(() => undefined);
+
+    this.orderRealtime.orderChanged$
+      .pipe(
+        filter(event => event.orderId === this.orderId),
+        switchMap(() => this.orderApi.getOrder(this.orderId!).pipe(catchError(() => EMPTY))),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(order => this.order.set(order));
+
+    this.destroyRef.onDestroy(() => {
+      void this.orderRealtime.disconnect();
+    });
   }
 
   protected listingImageUrl(): string | null {

@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
-import { apiConfig } from '../config/api.config';
+import { apiConfig, resolveApiUrl } from '../config/api.config';
 import {
   AuthResponse,
   AuthUserSummary,
@@ -117,7 +117,7 @@ export class AuthService {
     }
 
     const image = new Image();
-    image.src = profileImageUrl;
+    image.src = resolveApiUrl(profileImageUrl) ?? profileImageUrl;
   }
 
   private patchUser(user: AuthUserSummary): void {

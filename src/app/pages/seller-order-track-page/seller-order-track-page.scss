@@ -251,13 +251,19 @@
   border: none;
   border-radius: 6px;
   color: var(--color-text-primary);
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .track-status-badge:disabled {
   cursor: default;
   opacity: 1;
+}
+
+.track-status-badge:hover:not(:disabled) {
+  filter: brightness(0.96);
 }
 
 .track-status-badge--ordered,

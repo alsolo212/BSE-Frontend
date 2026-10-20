@@ -41,6 +41,7 @@ import {
   paymentStateTone
 } from '../../features/orders/order.constants';
 import { OrderApiService } from '../../features/orders/order-api.service';
+import { OrderRealtimeService } from '../../features/orders/order-realtime.service';
 import { OrderSummary } from '../../features/orders/order.models';
 import { ProfileApiService } from '../../features/profile/profile-api.service';
 import { UserProfile } from '../../features/profile/profile.models';
@@ -74,6 +75,7 @@ export class ProfilePageComponent {
   private isPreparingRequestedChat = false;
   private joinedChatId: string | null = null;
   private realtimeConnected = false;
+  private orderRealtimeConnected = false;
   private audioContext: AudioContext | null = null;
   private shouldScrollMessagesToBottom = false;
   private scrollMessagesFrame: number | null = null;
@@ -88,6 +90,7 @@ export class ProfilePageComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly listingApi = inject(ListingApiService);
   private readonly orderApi = inject(OrderApiService);
+  private readonly orderRealtime = inject(OrderRealtimeService);
   private readonly profileApi = inject(ProfileApiService);
   private readonly reviewApi = inject(ReviewApiService);
   private readonly route = inject(ActivatedRoute);
@@ -434,6 +437,10 @@ export class ProfilePageComponent {
         }
       });
 
+    this.orderRealtime.orderChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.refreshOrdersFromRealtime());
+
     this.destroyRef.onDestroy(() => {
       this.shouldScrollMessagesToBottom = false;
       if (this.scrollMessagesFrame !== null && typeof window !== 'undefined') {
@@ -447,6 +454,10 @@ export class ProfilePageComponent {
 
       if (this.realtimeConnected) {
         void this.chatRealtime.disconnect();
+      }
+
+      if (this.orderRealtimeConnected) {
+        void this.orderRealtime.disconnect();
       }
     });
 
@@ -1509,7 +1520,7 @@ export class ProfilePageComponent {
           this.reviews.set(reviews);
           this.refreshTabIndicators();
           this.initializeRealtime();
-          this.startLiveRefresh();
+          this.initializeOrderRealtime();
           this.handleActiveTabChanged();
           this.authService.updateCurrentUser({
             userName: profile.userName,
@@ -1549,27 +1560,29 @@ export class ProfilePageComponent {
     }
   }
 
-  private startLiveRefresh(): void {
-    timer(20000, 20000)
-      .pipe(
-        switchMap(() =>
-          forkJoin({
-            listings: this.listingApi.getMyListings(),
-            buyerOrders: this.orderApi.getMyOrders(),
-            soldOrders: this.orderApi.getMyOrders(true),
-            reviews: this.profile()
-              ? this.reviewApi.getUserReviews(this.profile()!.id)
-              : of<Review[]>([])
-          })
-        ),
-        takeUntilDestroyed(this.destroyRef)
-      )
+  private initializeOrderRealtime(): void {
+    if (this.orderRealtimeConnected || !this.authService.isAuthenticated()) {
+      return;
+    }
+
+    this.orderRealtimeConnected = true;
+    void this.orderRealtime.connect().catch(() => {
+      this.orderRealtimeConnected = false;
+    });
+  }
+
+  private refreshOrdersFromRealtime(): void {
+    forkJoin({
+      listings: this.listingApi.getMyListings(),
+      buyerOrders: this.orderApi.getMyOrders(),
+      soldOrders: this.orderApi.getMyOrders(true)
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ listings, buyerOrders, soldOrders, reviews }) => {
+        next: ({ listings, buyerOrders, soldOrders }) => {
           this.listings.set(listings);
           this.buyerOrders.set(buyerOrders);
           this.soldOrders.set(soldOrders);
-          this.reviews.set(reviews);
           this.refreshTabIndicators();
         }
       });

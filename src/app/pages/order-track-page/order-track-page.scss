@@ -221,6 +221,34 @@
   font-weight: 600;
 }
 
+.big-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 40px;
+  margin-bottom: var(--space-12);
+  padding: var(--space-8) var(--space-16);
+  border: none;
+  border-radius: 10px;
+  background: var(--color-text-primary);
+  color: var(--color-surface);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+}
+
+.big-button:hover:not(:disabled) {
+  background: var(--color-text-secondary);
+}
+
+.track-note {
+  margin: calc(var(--space-8) * -1) 0 var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 20px;
+}
+
 .track-status-badge {
   display: inline-flex;
   align-items: center;
