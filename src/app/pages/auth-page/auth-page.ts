@@ -21,11 +21,11 @@ import {
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
-import { apiConfig } from '../../core/config/api.config';
 import { extractApiError } from '../../core/http/api-error';
 import { SiteShellComponent } from '../../shared/site-shell/site-shell.component';
 
 type AuthMode = 'login' | 'register';
+type GoogleAuthStatus = 'loading' | 'ready' | 'unavailable';
 
 const passwordMatchValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
   const password = control.get('password')?.value;
@@ -58,6 +58,7 @@ export class AuthPageComponent implements AfterViewInit, OnDestroy {
   protected readonly registerPasswordVisible = signal(false);
   protected readonly registerConfirmPasswordVisible = signal(false);
   protected readonly isGoogleSubmitting = signal(false);
+  protected readonly googleAuthStatus = signal<GoogleAuthStatus>('loading');
 
   @ViewChild('googleButton', { static: true })
   private readonly googleButton?: ElementRef<HTMLDivElement>;
@@ -138,10 +139,22 @@ export class AuthPageComponent implements AfterViewInit, OnDestroy {
   }
 
   private initializeGoogleButtonWhenReady(): void {
+    this.authService.getGoogleClientId().subscribe(clientId => {
+      if (!clientId) {
+        this.googleAuthStatus.set('unavailable');
+        return;
+      }
+
+      this.googleAuthStatus.set('ready');
+      this.waitForGoogleScript(clientId);
+    });
+  }
+
+  private waitForGoogleScript(clientId: string): void {
     const googleIdentity = window.google?.accounts.id;
     if (googleIdentity && this.googleButton) {
       googleIdentity.initialize({
-        client_id: apiConfig.googleClientId,
+        client_id: clientId,
         callback: response => this.submitGoogle(response.credential),
         auto_select: false,
         cancel_on_tap_outside: true
@@ -160,7 +173,7 @@ export class AuthPageComponent implements AfterViewInit, OnDestroy {
     }
 
     this.googleInitializationTimer = window.setTimeout(
-      () => this.initializeGoogleButtonWhenReady(),
+      () => this.waitForGoogleScript(clientId),
       100
     );
   }

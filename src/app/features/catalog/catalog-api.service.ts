@@ -40,6 +40,14 @@ export class CatalogApiService {
       params = params.set('sortBy', query.sortBy);
     }
 
+    if (query.page) {
+      params = params.set('page', query.page);
+    }
+
+    if (query.pageSize) {
+      params = params.set('pageSize', query.pageSize);
+    }
+
     return this.http.get<CatalogProduct[]>(`${this.baseUrl}/catalog/products`, { params });
   }
 }

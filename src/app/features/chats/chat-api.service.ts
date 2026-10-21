@@ -15,7 +15,7 @@ import {
 export class ChatApiService {
   private readonly http = inject(HttpClient);
 
-  getMyChats(userId?: string, supportOnly = false): Observable<ChatSummary[]> {
+  getMyChats(userId?: string, supportOnly = false, page = 1, pageSize = 24): Observable<ChatSummary[]> {
     const params = new URLSearchParams();
     if (userId?.trim()) {
       params.set('userId', userId.trim());
@@ -23,6 +23,8 @@ export class ChatApiService {
     if (supportOnly) {
       params.set('supportOnly', 'true');
     }
+    params.set('page', page.toString());
+    params.set('pageSize', pageSize.toString());
 
     const suffix = params.size > 0 ? `?${params.toString()}` : '';
     return this.http.get<ChatSummary[]>(`${apiConfig.baseUrl}/chats${suffix}`);
@@ -44,8 +46,9 @@ export class ChatApiService {
     return this.http.post<ChatSummary>(`${apiConfig.baseUrl}/chats/${chatId}/claim`, {});
   }
 
-  getMessages(chatId: string): Observable<ChatMessage[]> {
-    return this.http.get<ChatMessage[]>(`${apiConfig.baseUrl}/chats/${chatId}/messages`);
+  getMessages(chatId: string, page = 1, pageSize = 100): Observable<ChatMessage[]> {
+    const params = { page: page.toString(), pageSize: pageSize.toString() };
+    return this.http.get<ChatMessage[]>(`${apiConfig.baseUrl}/chats/${chatId}/messages`, { params });
   }
 
   sendMessage(chatId: string, request: SendMessageRequest): Observable<ChatMessage> {

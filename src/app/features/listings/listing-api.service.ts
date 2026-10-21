@@ -59,6 +59,14 @@ export class ListingApiService {
       params = params.set('includeHidden', 'true');
     }
 
+    if (query.page) {
+      params = params.set('page', query.page);
+    }
+
+    if (query.pageSize) {
+      params = params.set('pageSize', query.pageSize);
+    }
+
     return this.http.get<ListingSummary[]>(`${apiConfig.baseUrl}/listings`, { params });
   }
 

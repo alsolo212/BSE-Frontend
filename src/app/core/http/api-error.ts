@@ -11,6 +11,10 @@ export function extractApiError(error: unknown, fallbackMessage = 'Something wen
 
   const errorBody = error.error;
   if (typeof errorBody === 'string' && errorBody.trim()) {
+    if (/<\/?(?:!doctype|html|head|body|pre)\b/i.test(errorBody)) {
+      return 'The API returned an unexpected response. Make sure the backend is running and the frontend API proxy is configured.';
+    }
+
     return errorBody;
   }
 

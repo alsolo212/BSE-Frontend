@@ -14,4 +14,6 @@ export interface CatalogProductsQuery {
   city?: string;
   condition?: 'New' | 'Used';
   sortBy?: 'newest' | 'cheapest' | 'expensive';
+  page?: number;
+  pageSize?: number;
 }

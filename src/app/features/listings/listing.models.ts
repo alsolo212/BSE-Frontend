@@ -88,6 +88,8 @@ export interface ListingQuery {
   ownerId?: string;
   sortBy?: 'newest' | 'cheapest' | 'expensive';
   includeHidden?: boolean;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface ListingImageUploadItem {
